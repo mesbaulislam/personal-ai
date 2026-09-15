@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="bn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Personal AI</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        /* =========================
+           LOGIN SCREEN
+        ========================= */
+
+        #loginScreen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111111;
+            z-index: 9999;
+        }
+
+        .login-box {
+            width: min(90%, 380px);
+            padding: 32px;
+            background: #1c1c1c;
+            border: 1px solid #333;
+            border-radius: 18px;
+            box-sizing: border-box;
+        }
+
+        .login-logo {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            color: #111111;
+            border-radius: 14px;
+            font-size: 25px;
+        }
+
+        .login-box h1 {
+            margin: 0;
+            text-align: center;
+            color: #ffffff;
+            font-size: 24px;
+        }
+
+        .login-subtitle {
+            margin: 8px 0 25px;
+            text-align: center;
+            color: #999999;
+            font-size: 14px;
+        }
+
+        .login-box label {
+            display: block;
+            margin-bottom: 7px;
+            color: #dddddd;
+            font-size: 14px;
+        }
+
+        .login-box input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 13px;
+            margin-bottom: 17px;
+            border: 1px solid #3a3a3a;
+            border-radius: 9px;
+            outline: none;
+            background: #292929;
+            color: #ffffff;
+            font-size: 15px;
+        }
+
+        .login-box input:focus {
+            border-color: #666666;
+        }
+
+        #loginBtn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 9px;
+            background: #ffffff;
+            color: #111111;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #loginBtn:hover {
+            opacity: 0.9;
+        }
+
+        #loginBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #loginError {
+            display: none;
+            margin-top: 14px;
+            color: #ff7070;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .login-private {
+            margin-top: 20px;
+            text-align: center;
+            color: #777777;
+            font-size: 12px;
+        }
+
+        /* Chat app hidden until login */
+        #app {
+            display: none;
+        }
+    </style>
+</head>
+
+
+<body>
+
+    <!-- =========================
+         LOGIN SCREEN
+    ========================= -->
+
+    <div id="loginScreen">
+
+        <div class="login-box">
+
+            <div class="login-logo">
+                ✦
+            </div>
+
+            <h1>
+                Personal AI
+            </h1>
+
+            <p class="login-subtitle">
+                Private AI Assistant
+            </p>
+
+
+            <form id="loginForm">
+
+                <label for="loginUsername">
+                    Username
+                </label>
+
+                <input
+                    type="text"
+                    id="loginUsername"
+                    placeholder="Enter username"
+                    autocomplete="username"
+                    required
+                >
+
+
+                <label for="loginPassword">
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    id="loginPassword"
+                    placeholder="Enter password"
+                    autocomplete="current-password"
+                    required
+                >
+
+
+                <button
+                    type="submit"
+                    id="loginBtn"
+                >
+                    Login
+                </button>
+
+            </form>
+
+
+            <div id="loginError">
+                Username অথবা password ভুল।
+            </div>
+
+
+            <div class="login-private">
+                🔒 Private use only
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         MAIN APP
+    ========================= -->
+
+    <div class="app" id="app">
+
+        <aside class="sidebar">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    ✦
+                </div>
+
+                <span>
+                    Personal AI
+                </span>
+
+            </div>
+
+
+            <button
+                class="new-chat"
+                id="newChat"
+                type="button"
+            >
+                <span>＋</span>
+                New Chat
+            </button>
+
+
+            <div
+                class="chat-list"
+                id="chatList"
+            ></div>
+
+
+<div class="sidebar-bottom">
+
+    <div class="private-status">
+        🔒 Private AI
+    </div>
+
+    <button id="logoutBtn" class="logout-btn">
+        Logout
+    </button>
+
+</div>
+        </aside>
+
+
+        <main class="chat-container">
+
+            <header class="topbar">
+
+                <button
+                    class="mobile-menu"
+                    id="mobileMenu"
+                    type="button"
+                >
+                    ☰
+                </button>
+
+
+                <div class="model-name">
+
+                    <strong>
+                        Personal AI
+                    </strong>
+
+                    <span>
+                        Online
+                    </span>
+
+                </div>
+
+            </header>
+
+
+            <section
+                class="messages"
+                id="messages"
+            >
+
+                <div
+                    class="welcome"
+                    id="welcome"
+                >
+
+                    <div class="welcome-icon">
+                        ✦
+                    </div>
+
+                    <h1>
+                        How can I help you?
+                    </h1>
+
+                    <p>
+                        তোমার প্রশ্ন লিখো অথবা একটি image upload করো।
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <div
+                class="image-preview"
+                id="imagePreview"
+            >
+
+                <img
+                    id="previewImage"
+                    src=""
+                    alt="Preview"
+                >
+
+                <button
+                    id="removeImage"
+                    type="button"
+                    aria-label="Remove image"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div class="input-wrapper">
+
+                <form id="chatForm">
+
+                    <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/png,image/jpeg,image/webp"
+                        hidden
+                    >
+
+
+                    <button
+                        type="button"
+                        class="icon-btn"
+                        id="uploadBtn"
+                        title="Upload image"
+                        aria-label="Upload image"
+                    >
+                        📎
+                    </button>
+
+
+                    <textarea
+                        id="messageInput"
+                        placeholder="Message Personal AI..."
+                        rows="1"
+                    ></textarea>
+
+
+                    <button
+                        type="submit"
+                        class="send-btn"
+                        id="sendBtn"
+                        title="Send"
+                        aria-label="Send message"
+                    >
+                        ➤
+                    </button>
+
+                </form>
+
+
+                <div class="input-note">
+                    Personal AI • Private use
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+    <script src="/static/app.js"></script>
+
+</body>
+
+</html>
