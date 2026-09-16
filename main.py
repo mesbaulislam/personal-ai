@@ -213,7 +213,7 @@ async def ask_ai(messages):
         "X-Title": "Personal AI",
     }
 
-    data = {
+    data = {"model": "nousresearch/hermes-3-llama-3.1-405b:free",
         "model": "openrouter/free",
         "messages": messages,
     }
