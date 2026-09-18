@@ -337,7 +337,46 @@ async def get_chat_messages(
         "success": True,
         "messages": result.get("results", []),
     }
+@app.delete("/chats/{chat_id}/messages/{message_id}")
+async def delete_message(
+    chat_id: int,
+    message_id: int,
+    username: str = Depends(require_login),
+):
+    result = await d1_query(
+        """
+        DELETE FROM messages
+        WHERE id = ?
+          AND chat_id = ?
+        RETURNING id
+        """,
+        [message_id, chat_id],
+    )
 
+    rows = result.get("results", [])
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail="Message not found",
+        )
+
+    await d1_query(
+        """
+        UPDATE chats
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        """,
+        [chat_id],
+    )
+
+    return {
+        "success": True,
+        "message": "Message deleted",
+    }
+
+
+@app.patch("/chats/{chat_id}/rename")
 
 @app.post("/chats/{chat_id}/messages")
 async def save_message(

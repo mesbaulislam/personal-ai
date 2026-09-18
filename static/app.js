@@ -360,11 +360,199 @@ function injectChatUIStyles() {
             text-align: center;
             padding: 14px 8px;
         }
-    `;
 
-    document.head.appendChild(style);
-}
+        .copy-message-btn {
+            margin-top: 8px;
+            padding: 5px 9px;
 
+            border: 0;
+            border-radius: 7px;
+
+            background: rgba(255,255,255,0.07);
+            color: inherit;
+
+            font-size: 12px;
+            cursor: pointer;
+
+            opacity: 0.65;
+            transition: 0.2s ease;
+        }
+
+        .copy-message-btn:hover {
+            opacity: 1;
+            background: rgba(255,255,255,0.12);
+        }
+        .ai-message-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .ai-message-actions button {
+            margin-top: 0;
+        }
+
+        .regenerate-message-btn {
+            padding: 5px 9px;
+            border: 0;
+            border-radius: 7px;
+            background: rgba(255,255,255,0.07);
+            color: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0.65;
+            transition: 0.2s ease;
+        }
+
+        .regenerate-message-btn:hover {
+            opacity: 1;
+            background: rgba(255,255,255,0.12);
+        }
+
+        .regenerate-message-btn:disabled,
+        .copy-message-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 700px) {
+            .regenerate-message-btn {
+                padding: 7px 10px;
+                font-size: 12px;
+            }
+        }
+        @media (max-width: 700px) {
+            .copy-message-btn {
+                padding: 7px 10px;
+                font-size: 12px;
+            }
+                }
+        
+        /* Thinking animation */
+        .thinking-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            height: 18px;
+        }
+
+        .thinking-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.35;
+            animation: thinkingDot 1.2s infinite ease-in-out;
+        }
+
+        .thinking-dots span:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .thinking-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .thinking-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes thinkingDot {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.3;
+            }
+
+            30% {
+                transform: translateY(-4px);
+                opacity: 1;
+            }
+        }
+
+
+        /* Mobile sidebar polish */
+        @media (max-width: 700px) {
+
+            .sidebar {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                bottom: 0 !important;
+
+                width: min(84vw, 320px) !important;
+                max-width: 320px !important;
+
+                transform: translateX(-105%) !important;
+                transition: transform 0.25s ease !important;
+
+                z-index: 1001 !important;
+
+                box-shadow:
+                    12px 0 35px rgba(0,0,0,0.22);
+            }
+
+            .sidebar.open {
+                transform: translateX(0) !important;
+            }
+
+            .personal-ai-mobile-overlay {
+                position: fixed;
+                inset: 0;
+
+                background: rgba(0,0,0,0.38);
+
+                backdrop-filter: blur(2px);
+                -webkit-backdrop-filter: blur(2px);
+
+                opacity: 0;
+                pointer-events: none;
+
+                transition: opacity 0.25s ease;
+
+                z-index: 1000;
+            }
+
+            .personal-ai-mobile-overlay.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            body.personal-ai-sidebar-open {
+                overflow: hidden;
+                touch-action: none;
+            }
+
+            .v21-chat-search {
+                padding: 11px 12px;
+                font-size: 14px;
+            }
+
+            .v21-chat-action {
+                min-width: 34px;
+                min-height: 34px;
+
+                padding: 7px;
+                font-size: 13px;
+            }
+
+            .v21-chat-row {
+                gap: 6px;
+            }
+            .chat-image {
+                max-width: 100%;
+                max-height: 380px;
+                border-radius: 12px;
+            }
+
+            .image-preview img {
+                width: 100px;
+                height: 100px;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
 
 function setupChatTools() {
     injectChatUIStyles();
@@ -905,11 +1093,11 @@ async function openChat(
 
     try {
 
-        const data =
-            await apiRequest(
-                `/chats/${encodeURIComponent(chat.id)}/messages`
-            );
 
+const data =
+    await apiRequest(
+        `/chats/${encodeURIComponent(chat.id)}/messages`
+    );
         chat.messages =
             Array.isArray(data.messages)
                 ? data.messages.map(
@@ -956,9 +1144,7 @@ async function openChat(
         window.innerWidth <= 700 &&
         sidebar
     ) {
-        sidebar.classList.remove(
-            "open"
-        );
+        closeMobileSidebar();
     }
 }
 
@@ -1607,7 +1793,264 @@ if (removeImage) {
     );
 }
 
+/* =========================================================
+   REGENERATE MESSAGE
+   ========================================================= */
 
+async function regenerateMessage(messageElement) {
+
+    const chat = getCurrentChat();
+
+    if (
+        !chat ||
+        !Array.isArray(chat.messages)
+    ) {
+        return;
+    }
+
+    const renderedMessages =
+        Array.from(
+            messages.querySelectorAll(".message")
+        );
+
+    const messageIndex =
+        renderedMessages.indexOf(
+            messageElement
+        );
+
+    if (messageIndex < 0) {
+        return;
+    }
+
+    const aiMessage =
+        chat.messages[messageIndex];
+
+    if (
+        !aiMessage ||
+        aiMessage.role !== "assistant" ||
+        !aiMessage.id
+    ) {
+        return;
+    }
+
+    /* Only regenerate the latest AI response */
+    if (
+        messageIndex !==
+        chat.messages.length - 1
+    ) {
+        alert(
+            "শুধু সর্বশেষ AI response regenerate করা যাবে।"
+        );
+        return;
+    }
+
+    const userMessage =
+        chat.messages[messageIndex - 1];
+
+    if (
+        !userMessage ||
+        userMessage.role !== "user"
+    ) {
+        return;
+    }
+
+    const textElement =
+        messageElement.querySelector(
+            ".message-text"
+        );
+
+    const copyBtn =
+        messageElement.querySelector(
+            ".copy-message-btn"
+        );
+
+    const regenerateBtn =
+        messageElement.querySelector(
+            ".regenerate-message-btn"
+        );
+
+    if (regenerateBtn) {
+        regenerateBtn.disabled = true;
+        regenerateBtn.textContent =
+            "⏳ Regenerating...";
+    }
+
+    if (copyBtn) {
+        copyBtn.disabled = true;
+    }
+
+    if (textElement) {
+        textElement.classList.add(
+            "typing"
+        );
+
+        textElement.innerHTML = `
+            <span class="thinking-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+        `;
+    }
+
+    try {
+
+        /* -----------------------------------------
+           ASK AI AGAIN
+           ----------------------------------------- */
+
+        const previousHistory =
+            chat.messages
+                .slice(
+                    0,
+                    messageIndex - 1
+                )
+                .map(item => ({
+                    role: item.role,
+                    content: item.content
+                }));
+
+        const formData =
+            new FormData();
+
+        formData.append(
+            "message",
+            userMessage.content
+        );
+
+        formData.append(
+            "history",
+            JSON.stringify(
+                previousHistory
+            )
+        );
+
+        const response =
+            await apiRequest(
+                "/chat",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+        const aiReply =
+            response.reply ||
+            "No response received.";
+
+        /* -----------------------------------------
+           DELETE OLD AI MESSAGE FROM D1
+           ----------------------------------------- */
+
+        await apiRequest(
+            `/chats/${encodeURIComponent(chat.id)}/messages/${encodeURIComponent(aiMessage.id)}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        /* -----------------------------------------
+           SAVE NEW AI MESSAGE
+           ----------------------------------------- */
+
+        const saved =
+            await saveMessageToCloud(
+                chat.id,
+                "assistant",
+                aiReply
+            );
+
+        const newMessage =
+            saved.message;
+
+        /* -----------------------------------------
+           UPDATE LOCAL CHAT
+           ----------------------------------------- */
+
+        chat.messages[
+            messageIndex
+        ] = {
+            id:
+                newMessage &&
+                newMessage.id
+                    ? newMessage.id
+                    : null,
+
+            chat_id:
+                chat.id,
+
+            role:
+                "assistant",
+
+            content:
+                aiReply
+        };
+
+        conversationHistory =
+            chat.messages.map(
+                item => ({
+                    role: item.role,
+                    content: item.content
+                })
+            );
+
+        if (textElement) {
+            textElement.classList.remove(
+                "typing"
+            );
+
+            textElement.textContent =
+                aiReply;
+        }
+
+        if (regenerateBtn) {
+            regenerateBtn.disabled =
+                false;
+
+            regenerateBtn.textContent =
+                "🔄 Regenerate";
+        }
+
+        if (copyBtn) {
+            copyBtn.disabled =
+                false;
+        }
+
+        cacheChats();
+        renderChatList();
+        scrollToBottom();
+
+    } catch (error) {
+
+        console.error(
+            "Regenerate error:",
+            error
+        );
+
+        if (textElement) {
+            textElement.classList.remove(
+                "typing"
+            );
+
+            textElement.textContent =
+                error.message ||
+                "Regenerate failed.";
+        }
+
+        if (regenerateBtn) {
+            regenerateBtn.disabled =
+                false;
+
+            regenerateBtn.textContent =
+                "🔄 Regenerate";
+        }
+
+        if (copyBtn) {
+            copyBtn.disabled =
+                false;
+        }
+    }
+}
 /* =========================================================
    ADD MESSAGE
    ========================================================= */
@@ -1662,6 +2105,32 @@ function addMessage(
 
             <div class="message-text"></div>
 
+            ${
+                type === "ai"
+                    ? `
+                        <div class="ai-message-actions">
+
+                            <button
+                                class="copy-message-btn"
+                                type="button"
+                                title="Copy"
+                            >
+                                📋 Copy
+                            </button>
+
+                            <button
+                                class="regenerate-message-btn"
+                                type="button"
+                                title="Regenerate"
+                            >
+                                🔄 Regenerate
+                            </button>
+
+                        </div>
+                    `
+                    : ""
+            }
+
         </div>
     `;
 
@@ -1675,6 +2144,7 @@ function addMessage(
             text;
     }
 
+    /* IMAGE */
     if (imageUrl) {
 
         const img =
@@ -1700,6 +2170,67 @@ function addMessage(
             );
     }
 
+    /* COPY + REGENERATE BUTTONS */
+    if (type === "ai") {
+
+        const copyBtn =
+            message.querySelector(
+                ".copy-message-btn"
+            );
+
+        const regenerateBtn =
+            message.querySelector(
+                ".regenerate-message-btn"
+            );
+
+        /* COPY */
+        copyBtn.addEventListener(
+            "click",
+            async () => {
+
+                try {
+
+                    await navigator.clipboard.writeText(
+                        text || ""
+                    );
+
+                    copyBtn.textContent =
+                        "✅ Copied";
+
+                    setTimeout(
+                        () => {
+                            copyBtn.textContent =
+                                "📋 Copy";
+                        },
+                        1500
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Copy failed:",
+                        error
+                    );
+
+                    copyBtn.textContent =
+                        "❌ Failed";
+                }
+            }
+        );
+
+        /* REGENERATE */
+        regenerateBtn.addEventListener(
+            "click",
+            async () => {
+
+                await regenerateMessage(
+                    message
+                );
+
+            }
+        );
+    }
+
     messages.appendChild(
         message
     );
@@ -1710,8 +2241,131 @@ function addMessage(
 
     return message;
 }
+/* =========================================================
+   IMAGE LIGHTBOX
+   ========================================================= */
+
+function openImageLightbox(src) {
+
+    let lightbox =
+        document.getElementById(
+            "imageLightbox"
+        );
+
+    if (!lightbox) {
+
+        lightbox =
+            document.createElement("div");
+
+        lightbox.id =
+            "imageLightbox";
+
+        lightbox.className =
+            "image-lightbox";
+
+        lightbox.innerHTML = `
+            <button
+                type="button"
+                class="image-lightbox-close"
+                aria-label="Close"
+            >
+                ×
+            </button>
+
+            <img
+                src=""
+                alt="Full size image"
+            >
+        `;
+
+        document.body.appendChild(
+            lightbox
+        );
+
+        lightbox.addEventListener(
+            "click",
+            event => {
+
+                if (
+                    event.target === lightbox
+                ) {
+                    closeImageLightbox();
+                }
+            }
+        );
+
+        lightbox
+            .querySelector(
+                ".image-lightbox-close"
+            )
+            .addEventListener(
+                "click",
+                closeImageLightbox
+            );
+    }
+
+    lightbox.querySelector("img").src =
+        src;
+
+    lightbox.classList.add(
+        "active"
+    );
+
+    document.body.style.overflow =
+        "hidden";
+}
 
 
+function closeImageLightbox() {
+
+    const lightbox =
+        document.getElementById(
+            "imageLightbox"
+        );
+
+    if (!lightbox) {
+        return;
+    }
+
+    lightbox.classList.remove(
+        "active"
+    );
+
+    document.body.style.overflow =
+        "";
+}
+
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (event.key === "Escape") {
+            closeImageLightbox();
+        }
+    }
+);
+
+
+/* Make chat images clickable */
+document.addEventListener(
+    "click",
+    event => {
+
+        const image =
+            event.target.closest(
+                ".chat-image"
+            );
+
+        if (!image) {
+            return;
+        }
+
+        openImageLightbox(
+            image.src
+        );
+    }
+);
 /* =========================================================
    LOADING MESSAGE
    ========================================================= */
@@ -1747,7 +2401,11 @@ function addLoadingMessage() {
             </div>
 
             <div class="message-text typing">
-                Thinking
+                <span class="thinking-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
             </div>
 
         </div>
@@ -1761,7 +2419,6 @@ function addLoadingMessage() {
 
     return message;
 }
-
 
 /* =========================================================
    SAVE MESSAGE TO CLOUD
@@ -1864,16 +2521,22 @@ if (chatForm) {
 
                     try {
 
-                        const data =
-                            await apiRequest(
-                                `/chats/${encodeURIComponent(chat.id)}/rename`,
-                                {
-                                    method: "PATCH",
-                                    body: makeFormData({
-                                        title
-                                    })
-                                }
-                            );
+                        const formData =
+                             new FormData();
+
+                        formData.append(
+                            "title",
+                            title
+                     );
+
+                    const data =
+                         await apiRequest(
+                             `/chats/${encodeURIComponent(chat.id)}/rename`,
+                             {
+                                method: "PATCH",
+                                body: formData
+                             }
+                         );
 
                         chat.title =
                             data.chat.title;
@@ -2180,8 +2843,117 @@ if (newChatBtn) {
 
 
 /* =========================================================
-   MOBILE SIDEBAR
+   MOBILE SIDEBAR — V2.2 POLISH
    ========================================================= */
+
+let mobileOverlay = null;
+
+function ensureMobileOverlay() {
+
+    if (mobileOverlay) {
+        return mobileOverlay;
+    }
+
+    mobileOverlay =
+        document.getElementById(
+            "personal-ai-mobile-overlay"
+        );
+
+    if (!mobileOverlay) {
+
+        mobileOverlay =
+            document.createElement("div");
+
+        mobileOverlay.id =
+            "personal-ai-mobile-overlay";
+
+        mobileOverlay.className =
+            "personal-ai-mobile-overlay";
+
+        document.body.appendChild(
+            mobileOverlay
+        );
+
+        mobileOverlay.addEventListener(
+            "click",
+            closeMobileSidebar
+        );
+    }
+
+    return mobileOverlay;
+}
+
+function syncMobileSidebarState() {
+
+    if (!sidebar) {
+        return;
+    }
+
+    const isMobile =
+        window.innerWidth <= 700;
+
+    const isOpen =
+        isMobile &&
+        sidebar.classList.contains("open");
+
+    const overlay =
+        ensureMobileOverlay();
+
+    overlay.classList.toggle(
+        "active",
+        isOpen
+    );
+
+    document.body.classList.toggle(
+        "personal-ai-sidebar-open",
+        isOpen
+    );
+
+    if (!isMobile) {
+
+        sidebar.classList.remove("open");
+        overlay.classList.remove("active");
+
+        document.body.classList.remove(
+            "personal-ai-sidebar-open"
+        );
+    }
+}
+
+function openMobileSidebar() {
+
+    if (
+        !sidebar ||
+        window.innerWidth > 700
+    ) {
+        return;
+    }
+
+    ensureMobileOverlay();
+
+    sidebar.classList.add("open");
+
+    syncMobileSidebarState();
+}
+
+function closeMobileSidebar() {
+
+    if (!sidebar) {
+        return;
+    }
+
+    sidebar.classList.remove("open");
+
+    if (mobileOverlay) {
+        mobileOverlay.classList.remove(
+            "active"
+        );
+    }
+
+    document.body.classList.remove(
+        "personal-ai-sidebar-open"
+    );
+}
 
 if (mobileMenu) {
 
@@ -2193,12 +2965,36 @@ if (mobileMenu) {
                 return;
             }
 
-            sidebar.classList.toggle(
-                "open"
-            );
+            if (
+                sidebar.classList.contains("open")
+            ) {
+                closeMobileSidebar();
+            } else {
+                openMobileSidebar();
+            }
         }
     );
 }
+
+window.addEventListener(
+    "resize",
+    syncMobileSidebarState
+);
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key === "Escape" &&
+            window.innerWidth <= 700 &&
+            sidebar &&
+            sidebar.classList.contains("open")
+        ) {
+            closeMobileSidebar();
+        }
+    }
+);
 
 
 /* =========================================================
@@ -2212,14 +3008,9 @@ if (messages) {
         () => {
 
             if (
-                window.innerWidth <=
-                    700 &&
-                sidebar
+                window.innerWidth <= 700
             ) {
-
-                sidebar.classList.remove(
-                    "open"
-                );
+                closeMobileSidebar();
             }
         }
     );
