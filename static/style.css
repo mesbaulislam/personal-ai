@@ -15,6 +15,17 @@
     --user: #303030;
 }
 
+:root[data-theme="light"] {
+    --bg: #f5f7fb;
+    --sidebar: #ffffff;
+    --input: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --accent: #111827;
+    --user: #e8eef7;
+}
+
 body {
     font-family: Arial, Helvetica, sans-serif;
     background: var(--bg);
@@ -675,4 +686,25 @@ button {
         top: 12px;
         right: 12px;
     }
+}
+/* =========================
+   LIGHT / DARK THEME
+   ========================= */
+
+:root[data-theme="light"] {
+    --bg-main: #f5f7fb;
+    --bg-sidebar: #ffffff;
+    --bg-card: #ffffff;
+    --bg-input: #ffffff;
+
+    --text-main: #1f2937;
+    --text-secondary: #6b7280;
+
+    --border-color: #e5e7eb;
+
+    --user-message: #e8f0fe;
+    --ai-message: #ffffff;
+
+    --button-bg: #f3f4f6;
+    --button-hover: #e5e7eb;
 }

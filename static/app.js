@@ -90,12 +90,68 @@ let conversationHistory = [];
 
 let searchInput = null;
 
+let editingMessageIndex = null;
+
+let currentTheme =
+    localStorage.getItem("personalAI_theme") ||
+    "dark";
+
+
+function applyTheme() {
+
+    document.documentElement.setAttribute(
+        "data-theme",
+        currentTheme
+    );
+
+    localStorage.setItem(
+        "personalAI_theme",
+        currentTheme
+    );
+}
+
+
+applyTheme();
+
+
+const themeBtn =
+    document.getElementById("themeBtn");
+
+
+if (themeBtn) {
+
+    themeBtn.textContent =
+        currentTheme === "dark"
+            ? "🌙 Dark Mode"
+            : "☀️ Light Mode";
+
+
+    themeBtn.addEventListener(
+        "click",
+        () => {
+
+            currentTheme =
+                currentTheme === "dark"
+                    ? "light"
+                    : "dark";
+
+            applyTheme();
+
+            themeBtn.textContent =
+                currentTheme === "dark"
+                    ? "🌙 Dark Mode"
+                    : "☀️ Light Mode";
+        }
+    );
+}
+
 
 /* =========================================================
    BASIC HELPERS
    ========================================================= */
 
 function showApp() {
+
     if (loginScreen) {
         loginScreen.style.display = "none";
     }
@@ -107,6 +163,7 @@ function showApp() {
 
 
 function showLogin() {
+
     if (loginScreen) {
         loginScreen.style.display = "flex";
     }
@@ -115,6 +172,55 @@ function showLogin() {
         app.style.display = "none";
     }
 }
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+const logoutBtn =
+    document.getElementById("logoutBtn");
+
+
+if (logoutBtn) {
+
+    logoutBtn.addEventListener(
+        "click",
+        async () => {
+
+            try {
+
+                await apiRequest(
+                    "/logout",
+                    {
+                        method: "POST"
+                    }
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Logout failed:",
+                    error
+                );
+            }
+
+            showLogin();
+
+            currentChatId = null;
+
+            conversationHistory = [];
+
+            localStorage.removeItem(
+                "personalAI_currentChat"
+            );
+        }
+    );
+}
+    if (app) {
+        app.style.display = "none";
+    }
+
 
 
 function cacheChats() {
@@ -2105,7 +2211,7 @@ function addMessage(
 
             <div class="message-text"></div>
 
-            ${
+                        ${
                 type === "ai"
                     ? `
                         <div class="ai-message-actions">
@@ -2128,9 +2234,20 @@ function addMessage(
 
                         </div>
                     `
-                    : ""
-            }
+                    : `
+                        <div class="user-message-actions">
 
+                            <button
+                                class="edit-message-btn"
+                                type="button"
+                                title="Edit message"
+                            >
+                                ✏️ Edit
+                            </button>
+
+                        </div>
+                    `
+            }
         </div>
     `;
 
@@ -2168,6 +2285,83 @@ function addMessage(
             .appendChild(
                 img
             );
+    }
+    /* EDIT USER MESSAGE */
+    if (type === "user") {
+
+        const editBtn =
+            message.querySelector(
+                ".edit-message-btn"
+            );
+
+        if (editBtn) {
+
+            editBtn.addEventListener(
+                "click",
+                () => {
+
+                    const chat =
+                        getCurrentChat();
+
+                    if (
+                        !chat ||
+                        !Array.isArray(chat.messages)
+                    ) {
+                        return;
+                    }
+
+                    const renderedMessages =
+                        Array.from(
+                            messages.querySelectorAll(
+                                ".message"
+                            )
+                        );
+
+                    const messageIndex =
+                        renderedMessages.indexOf(
+                            message
+                        );
+
+                    if (
+                        messageIndex < 0 ||
+                        !chat.messages[messageIndex]
+                    ) {
+                        return;
+                    }
+
+                    const editedMessage =
+                        chat.messages[
+                            messageIndex
+                        ];
+
+                    if (
+                        editedMessage.role !== "user"
+                    ) {
+                        return;
+                    }
+
+                    editingMessageIndex =
+                        messageIndex;
+
+                    messageInput.value =
+                        editedMessage.content || "";
+
+                    messageInput.style.height =
+                        "auto";
+
+                    messageInput.style.height =
+                        Math.min(
+                            messageInput.scrollHeight,
+                            180
+                        ) + "px";
+
+                    messageInput.focus();
+
+                    editBtn.textContent =
+                        "✏️ Editing...";
+                }
+            );
+        }
     }
 
     /* COPY + REGENERATE BUTTONS */
@@ -2442,7 +2636,272 @@ async function saveMessageToCloud(
     );
 }
 
+/* =========================================================
+   EDIT MESSAGE
+   ========================================================= */
 
+async function editMessage(
+    messageIndex,
+    newText
+) {
+
+    const chat =
+        getCurrentChat();
+
+    if (
+        !chat ||
+        !Array.isArray(chat.messages)
+    ) {
+        return;
+    }
+
+    const oldUserMessage =
+        chat.messages[messageIndex];
+
+    const oldAiMessage =
+        chat.messages[messageIndex + 1];
+
+    if (
+        !oldUserMessage ||
+        oldUserMessage.role !== "user"
+    ) {
+        return;
+    }
+
+    if (
+        oldAiMessage &&
+        oldAiMessage.role !== "assistant"
+    ) {
+        return;
+    }
+
+    sendBtn.disabled = true;
+
+    const originalText =
+        newText;
+
+    editingMessageIndex = null;
+
+    try {
+
+        /* -----------------------------------------
+           AI REQUEST
+           ----------------------------------------- */
+
+        const previousHistory =
+            chat.messages
+                .slice(
+                    0,
+                    messageIndex
+                )
+                .map(item => ({
+                    role:
+                        item.role,
+                    content:
+                        item.content
+                }));
+
+        const formData =
+            new FormData();
+
+        formData.append(
+            "message",
+            originalText
+        );
+
+        formData.append(
+            "history",
+            JSON.stringify(
+                previousHistory
+            )
+        );
+
+        const loadingMessage =
+            addLoadingMessage();
+
+        const response =
+            await apiRequest(
+                "/chat",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+        loadingMessage.remove();
+
+        const aiReply =
+            response.reply ||
+            "No response received.";
+
+
+        /* -----------------------------------------
+           DELETE OLD MESSAGES FROM D1
+           ----------------------------------------- */
+
+        if (
+            oldAiMessage &&
+            oldAiMessage.id
+        ) {
+
+            await apiRequest(
+                `/chats/${encodeURIComponent(chat.id)}/messages/${encodeURIComponent(oldAiMessage.id)}`,
+                {
+                    method: "DELETE"
+                }
+            );
+        }
+
+        if (
+            oldUserMessage.id
+        ) {
+
+            await apiRequest(
+                `/chats/${encodeURIComponent(chat.id)}/messages/${encodeURIComponent(oldUserMessage.id)}`,
+                {
+                    method: "DELETE"
+                }
+            );
+        }
+
+
+        /* -----------------------------------------
+           SAVE NEW USER MESSAGE
+           ----------------------------------------- */
+
+        const savedUser =
+            await saveMessageToCloud(
+                chat.id,
+                "user",
+                originalText
+            );
+
+        const savedUserMessage =
+            savedUser &&
+            savedUser.message
+                ? savedUser.message
+                : null;
+
+
+        /* -----------------------------------------
+           SAVE NEW AI MESSAGE
+           ----------------------------------------- */
+
+        const savedAssistant =
+            await saveMessageToCloud(
+                chat.id,
+                "assistant",
+                aiReply
+            );
+
+        const savedAssistantMessage =
+            savedAssistant &&
+            savedAssistant.message
+                ? savedAssistant.message
+                : null;
+
+
+        /* -----------------------------------------
+           UPDATE LOCAL CHAT
+           ----------------------------------------- */
+
+        const newUserMessage = {
+            id:
+                savedUserMessage &&
+                savedUserMessage.id
+                    ? savedUserMessage.id
+                    : null,
+
+            chat_id:
+                chat.id,
+
+            role:
+                "user",
+
+            content:
+                originalText
+        };
+
+        const newAiMessage = {
+            id:
+                savedAssistantMessage &&
+                savedAssistantMessage.id
+                    ? savedAssistantMessage.id
+                    : null,
+
+            chat_id:
+                chat.id,
+
+            role:
+                "assistant",
+
+            content:
+                aiReply
+        };
+
+        chat.messages.splice(
+            messageIndex,
+            oldAiMessage ? 2 : 1,
+            newUserMessage,
+            newAiMessage
+        );
+
+
+        conversationHistory =
+            chat.messages.map(
+                item => ({
+                    role:
+                        item.role,
+                    content:
+                        item.content
+                })
+            );
+
+
+        /* -----------------------------------------
+           CLEAR INPUT
+           ----------------------------------------- */
+
+        messageInput.value =
+            "";
+
+        messageInput.style.height =
+            "auto";
+
+
+        cacheChats();
+
+        renderMessages(
+            chat
+        );
+
+        renderChatList();
+
+        scrollToBottom();
+
+    } catch (error) {
+
+        console.error(
+            "Edit message error:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Message edit করা যায়নি।"
+        );
+
+    } finally {
+
+        sendBtn.disabled =
+            false;
+
+        editingMessageIndex =
+            null;
+
+        messageInput.focus();
+    }
+}
 /* =========================================================
    SEND CHAT
    ========================================================= */
@@ -2456,17 +2915,38 @@ if (chatForm) {
             event.preventDefault();
 
             const message =
-                messageInput.value.trim();
+    messageInput.value.trim();
 
-            if (
-                !message &&
-                !selectedImage
-            ) {
-                return;
-            }
+if (
+    !message &&
+    !selectedImage
+) {
+    return;
+}
 
-            sendBtn.disabled =
-                true;
+/* EDIT MODE */
+
+if (
+    editingMessageIndex !== null
+) {
+
+    if (selectedImage) {
+        alert(
+            "Edit করার সময় image upload করা যাবে না।"
+        );
+        return;
+    }
+
+    await editMessage(
+        editingMessageIndex,
+        message
+    );
+
+    return;
+}
+
+sendBtn.disabled =
+    true;
 
             const imageToSend =
                 selectedImage;
@@ -2583,11 +3063,23 @@ if (chatForm) {
                         userText
                 });
 
-                await saveMessageToCloud(
-                    chat.id,
-                    "user",
-                    userText
-                );
+                const savedUser =
+                    await saveMessageToCloud(
+                        chat.id,
+                        "user",
+                        userText
+                    );
+
+                if (
+                    savedUser &&
+                    savedUser.message &&
+                    savedUser.message.id
+                ) {
+                    chat.messages[
+                        chat.messages.length - 1
+                    ].id =
+                        savedUser.message.id;
+                }
 
                 cacheChats();
 
@@ -2709,11 +3201,23 @@ if (chatForm) {
                 });
 
 
-                await saveMessageToCloud(
-                    chat.id,
-                    "assistant",
-                    aiReply
-                );
+                const savedAssistant =
+                    await saveMessageToCloud(
+                        chat.id,
+                        "assistant",
+                        aiReply
+                    );
+
+                if (
+                    savedAssistant &&
+                    savedAssistant.message &&
+                    savedAssistant.message.id
+                ) {
+                    chat.messages[
+                        chat.messages.length - 1
+                    ].id =
+                        savedAssistant.message.id;
+                }
 
                 cacheChats();
 
