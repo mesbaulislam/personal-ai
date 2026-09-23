@@ -4,3 +4,5 @@ python-dotenv
 httpx
 python-multipart
 itsdangerous
+pypdf
+python-docx

@@ -232,7 +232,27 @@
                 <span>＋</span>
                 New Chat
             </button>
+<div class="folder-section">
 
+    <div class="folder-header">
+        <span>🗂️ Folders</span>
+
+        <button
+            type="button"
+            id="newFolderBtn"
+            class="folder-add-btn"
+            title="New Folder"
+        >
+            ＋
+        </button>
+    </div>
+
+    <div
+        id="folderList"
+        class="folder-list"
+    ></div>
+
+</div>
 
             <div
                 class="chat-list"
@@ -248,6 +268,14 @@
 <button type="button" id="themeBtn" class="theme-btn">
     🌙 Dark Mode
 </button>
+    <button
+        type="button"
+        id="exportChatBtn"
+        class="theme-btn"
+    >
+        📥 Export Chat
+    </button>
+    
     <button type="button" id="logoutBtn" class="logout-btn">
         Logout
     </button>
@@ -334,7 +362,27 @@
 
 
             <div class="input-wrapper">
+            <div
+    id="filePreview"
+    class="file-preview"
+    style="display: none;"
+>
+    <div class="file-preview-info">
+        <span class="file-preview-icon">📄</span>
+        <span id="filePreviewName"></span>
+    </div>
 
+    <button
+        type="button"
+        id="removeFile"
+        class="file-preview-remove"
+        title="Remove file"
+    >
+        ✕
+    </button>
+</div>
+
+<form id="chatForm">
                 <form id="chatForm">
 
                     <input
@@ -354,6 +402,22 @@
                     >
                         📎
                     </button>
+                    <input
+    type="file"
+    id="fileInput"
+    accept=".txt,.pdf,.docx"
+    hidden
+>
+
+<button
+    type="button"
+    class="icon-btn"
+    id="fileBtn"
+    title="Upload file"
+    aria-label="Upload file"
+>
+    📄
+</button>
 
 
                     <textarea
@@ -361,7 +425,15 @@
                         placeholder="Message Personal AI..."
                         rows="1"
                     ></textarea>
-
+                    <button
+                        type="button"
+                        class="voice-btn"
+                        id="voiceBtn"
+                        title="Voice input"
+                        aria-label="Voice input"
+                    >
+                        🎤
+                    </button>
 
                     <button
                         type="submit"
@@ -388,7 +460,17 @@
 
 
     <script src="/static/app.js"></script>
-
+<div id="serverLoading" class="server-loading">
+    <div class="server-loading-box">
+        <div class="server-spinner"></div>
+        <div class="server-loading-title">
+            Server is waking up...
+        </div>
+        <div class="server-loading-text">
+            একটু সময় লাগতে পারে ⏳
+        </div>
+    </div>
+</div>
 </body>
 
 </html>

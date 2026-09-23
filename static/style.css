@@ -309,10 +309,10 @@ button {
 ========================= */
 
 .input-wrapper {
-    position: fixed;
+    position: relative;
     bottom: 0;
     right: 0;
-    left: 260px;
+    left: 0;
     padding: 15px 20px 18px;
     background: linear-gradient(
         transparent,
@@ -707,4 +707,338 @@ button {
 
     --button-bg: #f3f4f6;
     --button-hover: #e5e7eb;
+}
+/* Server cold-start loading */
+.server-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(5px);
+}
+
+.server-loading-box {
+    width: min(340px, calc(100% - 40px));
+    padding: 28px 24px;
+
+    text-align: center;
+
+    background: var(--card);
+    color: var(--text);
+
+    border: 1px solid var(--border);
+    border-radius: 18px;
+
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.35);
+}
+
+.server-spinner {
+    width: 42px;
+    height: 42px;
+
+    margin: 0 auto 18px;
+
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+
+    animation: serverSpin 0.8s linear infinite;
+}
+
+.server-loading-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.server-loading-text {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+@keyframes serverSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+/* Voice input button */
+.voice-btn {
+    width: 44px;
+    height: 44px;
+
+    flex-shrink: 0;
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    background: var(--card);
+    color: var(--text);
+
+    font-size: 20px;
+
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.voice-btn:hover {
+    background: var(--hover);
+    transform: scale(1.04);
+}
+
+.voice-btn.recording {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+
+    animation: voicePulse 1s infinite;
+}
+
+@keyframes voicePulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    }
+}
+.file-preview {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    width: 100%;
+    max-width: 850px;
+    box-sizing: border-box;
+
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 8px;
+
+    padding: 8px 12px;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background: var(--card);
+    color: var(--text);
+}
+
+
+
+.file-preview-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.file-preview-icon {
+    font-size: 18px;
+}
+
+#filePreviewName {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-preview-remove {
+    flex-shrink: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    opacity: 0.65;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 3px 6px;
+    border-radius: 6px;
+}
+
+.file-preview-remove:hover {
+    background: var(--hover);
+    opacity: 1;
+}
+
+/* =========================================================
+   CHAT FOLDERS
+   ========================================================= */
+
+.folder-section {
+    margin: 12px 12px 8px;
+}
+
+.folder-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 6px 8px;
+
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.folder-add-btn {
+    width: 28px;
+    height: 28px;
+
+    border: 1px solid var(--border);
+    border-radius: 8px;
+
+    background: var(--card);
+    color: var(--text);
+
+    font-size: 18px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.folder-add-btn:hover {
+    background: var(--hover);
+    transform: scale(1.05);
+}
+
+.folder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.folder-item {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    padding: 8px 10px;
+
+    border: 1px solid transparent;
+    border-radius: 9px;
+
+    background: transparent;
+    color: var(--text);
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.folder-item:hover {
+    background: var(--hover);
+    border-color: var(--border);
+}
+
+.folder-item.active {
+    background: var(--hover);
+    border-color: var(--border);
+}
+
+.folder-item-name {
+    flex: 1;
+
+    min-width: 0;
+
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    text-align: left;
+
+    font-size: 14px;
+}
+
+.folder-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+
+    flex-shrink: 0;
+}
+
+.folder-action-btn {
+    width: 26px;
+    height: 26px;
+
+    border: none;
+    border-radius: 7px;
+
+    background: transparent;
+    color: var(--text);
+
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    opacity: 0.7;
+
+    transition:
+        background 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.folder-action-btn:hover {
+    background: var(--hover);
+    opacity: 1;
+}
+
+.folder-back-btn {
+    width: 100%;
+    margin: 4px 0 8px;
+    padding: 8px 10px;
+
+    border: 1px solid var(--border);
+    border-radius: 9px;
+
+    background: transparent;
+    color: var(--text);
+
+    font-size: 13px;
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.folder-back-btn:hover {
+    background: var(--hover);
+    border-color: var(--border);
 }

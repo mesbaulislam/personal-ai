@@ -17,7 +17,8 @@ from fastapi import (
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from itsdangerous import URLSafeSerializer
-
+from pypdf import PdfReader
+from docx import Document
 
 # =========================
 # ENVIRONMENT
@@ -108,6 +109,62 @@ async def d1_query(sql: str, params=None):
 
 app = FastAPI(title="Personal AI")
 
+# =========================
+# FILE TEXT EXTRACTION
+# =========================
+
+async def extract_file_text(
+    file: UploadFile
+):
+    filename = (
+        file.filename or ""
+    ).lower()
+
+    content = await file.read()
+
+    if filename.endswith(".txt"):
+        return content.decode(
+            "utf-8",
+            errors="ignore"
+        )
+
+    if filename.endswith(".pdf"):
+        import io
+
+        reader = PdfReader(
+            io.BytesIO(content)
+        )
+
+        pages = []
+
+        for page in reader.pages:
+            text = page.extract_text()
+
+            if text:
+                pages.append(text)
+
+        return "\n\n".join(pages)
+
+    if filename.endswith(".docx"):
+        import io
+
+        document = Document(
+            io.BytesIO(content)
+        )
+
+        return "\n".join(
+            paragraph.text
+            for paragraph in document.paragraphs
+            if paragraph.text.strip()
+        )
+
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            "Supported files: "
+            "TXT, PDF, DOCX"
+        ),
+    )
 
 # =========================
 # FRONTEND
@@ -256,6 +313,54 @@ def require_login(
         )
 
 
+@app.post("/upload-file")
+async def upload_file(
+    file: UploadFile = File(...),
+    username: str = Depends(require_login),
+):
+    filename = (
+        file.filename or ""
+    ).lower()
+
+    allowed_extensions = (
+        ".txt",
+        ".pdf",
+        ".docx",
+    )
+
+    if not filename.endswith(
+        allowed_extensions
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Only TXT, PDF and DOCX "
+                "files are supported."
+            ),
+        )
+
+    text = await extract_file_text(
+        file
+    )
+
+    if not text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Could not extract any text from the file.",
+        )
+
+    max_chars = 30000
+
+    if len(text) > max_chars:
+        text = text[:max_chars] + (
+            "\n\n[File text truncated]"
+        )
+
+    return {
+        "success": True,
+        "filename": file.filename,
+        "text": text,
+    }
 # =========================
 # D1 TEST
 # =========================
@@ -281,24 +386,212 @@ async def test_d1(
 @app.post("/chats")
 async def create_chat(
     title: str = Form("New Chat"),
+    folder_id: int | None = Form(None),
     username: str = Depends(require_login),
 ):
     title = title.strip() or "New Chat"
 
     result = await d1_query(
         """
-        INSERT INTO chats (title)
-        VALUES (?)
-        RETURNING id, title, pinned, created_at, updated_at
+        INSERT INTO chats (title, folder_id)
+        VALUES (?, ?)
+        RETURNING
+            id,
+            title,
+            pinned,
+            folder_id,
+            created_at,
+            updated_at
         """,
-        [title],
+        [title, folder_id],
     )
 
     return {
         "success": True,
         "chat": result.get("results", [])[0],
     }
+# =========================
+# FOLDER API
+# =========================
+@app.patch("/folders/{folder_id}/rename")
+async def rename_folder(
+    folder_id: int,
+    name: str = Form(...),
+    username: str = Depends(require_login),
+):
+    name = name.strip()
 
+    if not name:
+        raise HTTPException(
+            status_code=400,
+            detail="Folder name is empty",
+        )
+
+    result = await d1_query(
+        """
+        UPDATE folders
+        SET name = ?
+        WHERE id = ?
+        RETURNING id, name, created_at
+        """,
+        [name, folder_id],
+    )
+
+    rows = result.get("results", [])
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail="Folder not found",
+        )
+
+    return {
+        "success": True,
+        "folder": rows[0],
+    }
+
+
+@app.delete("/folders/{folder_id}")
+async def delete_folder(
+    folder_id: int,
+    username: str = Depends(require_login),
+):
+    existing = await d1_query(
+        """
+        SELECT id
+        FROM folders
+        WHERE id = ?
+        """,
+        [folder_id],
+    )
+
+    if not existing.get("results", []):
+        raise HTTPException(
+            status_code=404,
+            detail="Folder not found",
+        )
+
+    await d1_query(
+        """
+        UPDATE chats
+        SET folder_id = NULL
+        WHERE folder_id = ?
+        """,
+        [folder_id],
+    )
+
+    await d1_query(
+        """
+        DELETE FROM folders
+        WHERE id = ?
+        """,
+        [folder_id],
+    )
+
+    return {
+        "success": True,
+        "message": "Folder deleted",
+    }
+    
+@app.patch("/chats/{chat_id}/folder")
+async def move_chat_to_folder(
+    chat_id: int,
+    folder_id: int | None = Form(None),
+    username: str = Depends(require_login),
+):
+    if folder_id is not None:
+        folder_result = await d1_query(
+            """
+            SELECT id
+            FROM folders
+            WHERE id = ?
+            """,
+            [folder_id],
+        )
+
+        if not folder_result.get("results", []):
+            raise HTTPException(
+                status_code=404,
+                detail="Folder not found",
+            )
+
+    result = await d1_query(
+        """
+        UPDATE chats
+        SET folder_id = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        RETURNING
+            id,
+            title,
+            pinned,
+            folder_id,
+            created_at,
+            updated_at
+        """,
+        [folder_id, chat_id],
+    )
+
+    rows = result.get("results", [])
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail="Chat not found",
+        )
+
+    return {
+        "success": True,
+        "chat": rows[0],
+    }
+
+@app.post("/folders")
+async def create_folder(
+    name: str = Form(...),
+    username: str = Depends(require_login),
+):
+    name = name.strip()
+
+    if not name:
+        raise HTTPException(
+            status_code=400,
+            detail="Folder name is empty",
+        )
+
+    result = await d1_query(
+        """
+        INSERT INTO folders (name)
+        VALUES (?)
+        RETURNING id, name, created_at
+        """,
+        [name],
+    )
+
+    return {
+        "success": True,
+        "folder": result.get("results", [])[0],
+    }
+
+
+@app.get("/folders")
+async def get_folders(
+    username: str = Depends(require_login),
+):
+    result = await d1_query(
+        """
+        SELECT
+            id,
+            name,
+            created_at
+        FROM folders
+        ORDER BY created_at ASC
+        """
+    )
+
+    return {
+        "success": True,
+        "folders": result.get("results", []),
+    }
 
 @app.get("/chats")
 async def get_chats(
@@ -306,7 +599,13 @@ async def get_chats(
 ):
     result = await d1_query(
         """
-        SELECT id, title, pinned, created_at, updated_at
+        SELECT
+            id,
+            title,
+            pinned,
+            folder_id,
+            created_at,
+            updated_at
         FROM chats
         ORDER BY pinned DESC, updated_at DESC
         """
@@ -376,7 +675,6 @@ async def delete_message(
     }
 
 
-@app.patch("/chats/{chat_id}/rename")
 
 @app.post("/chats/{chat_id}/messages")
 async def save_message(
@@ -548,6 +846,7 @@ async def search_chats(
             c.id,
             c.title,
             c.pinned,
+            c.folder_id,
             c.created_at,
             c.updated_at
         FROM chats c

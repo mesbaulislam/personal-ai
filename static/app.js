@@ -50,6 +50,177 @@ const uploadBtn =
 const imageInput =
     document.getElementById("imageInput");
 
+const fileBtn =
+    document.getElementById("fileBtn");
+
+    const fileInput =
+    document.getElementById("fileInput");
+let selectedFile = null;
+const filePreview =
+    document.getElementById("filePreview");
+
+const filePreviewName =
+    document.getElementById("filePreviewName");
+
+const removeFile =
+    document.getElementById("removeFile");
+if (fileBtn && fileInput) {
+
+    fileBtn.addEventListener(
+        "click",
+        () => {
+            fileInput.click();
+        }
+    );
+if (removeFile) {
+    removeFile.addEventListener(
+        "click",
+        () => {
+            selectedFile = null;
+
+            fileInput.value = "";
+
+            if (filePreview) {
+                filePreviewName.textContent =
+                    "";
+
+                filePreview.style.display =
+                "none";
+                ;
+            }
+        }
+    );
+}
+    fileInput.addEventListener(
+        "change",
+        async () => {
+
+            const file =
+                fileInput.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            const allowedTypes = [
+                "text/plain",
+                "application/pdf",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ];
+
+            const allowedExtensions = [
+                ".txt",
+                ".pdf",
+                ".docx"
+            ];
+
+            const filename =
+                file.name.toLowerCase();
+
+            const validType =
+                allowedTypes.includes(
+                    file.type
+                );
+
+            const validExtension =
+                allowedExtensions.some(
+                    ext =>
+                        filename.endsWith(ext)
+                );
+
+            if (
+                !validType &&
+                !validExtension
+            ) {
+                alert(
+                    "শুধু TXT, PDF এবং DOCX file দেওয়া যাবে।"
+                );
+
+                fileInput.value = "";
+                return;
+            }
+
+            // Maximum 10 MB
+            if (
+                file.size >
+                10 * 1024 * 1024
+            ) {
+                alert(
+                    "File size সর্বোচ্চ 10 MB হতে পারবে।"
+                );
+
+                fileInput.value = "";
+                return;
+            }
+
+            try {
+
+                fileBtn.textContent = "⏳";
+                fileBtn.disabled = true;
+
+                const formData =
+                    new FormData();
+
+                formData.append(
+                    "file",
+                    file
+                );
+
+                const data =
+                    await apiRequest(
+                        "/upload-file",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+                selectedFile = {
+                    name:
+                        data.filename,
+                    text:
+                        data.text
+                };
+if (filePreview) {
+    filePreviewName.textContent =
+        data.filename;
+
+    filePreview.style.display =
+        "flex";
+}
+                fileBtn.textContent = "📄";
+
+                alert(
+                    `File loaded: ${data.filename}`
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "File upload error:",
+                    error
+                );
+
+                selectedFile = null;
+
+                alert(
+                    error.message ||
+                    "File upload failed."
+                );
+
+                fileBtn.textContent = "📄";
+
+            } finally {
+
+                fileBtn.disabled = false;
+                fileInput.value = "";
+
+            }
+        }
+    );
+}
+
+
 const imagePreview =
     document.getElementById("imagePreview");
 
@@ -71,6 +242,100 @@ const sidebar =
 const sendBtn =
     document.getElementById("sendBtn");
 
+const voiceBtn =
+    document.getElementById("voiceBtn");
+
+let voiceRecognition = null;
+let isRecordingVoice = false;
+
+if (
+    voiceBtn &&
+    (
+        "SpeechRecognition" in window ||
+        "webkitSpeechRecognition" in window
+    )
+) {
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+    voiceRecognition =
+        new SpeechRecognition();
+
+    voiceRecognition.continuous = false;
+    voiceRecognition.interimResults = false;
+    voiceRecognition.lang = "bn-BD";
+
+    voiceRecognition.onstart = () => {
+        isRecordingVoice = true;
+
+        voiceBtn.classList.add(
+            "recording"
+        );
+
+        voiceBtn.textContent = "⏹️";
+        voiceBtn.title = "Stop recording";
+    };
+
+    voiceRecognition.onresult = (
+        event
+    ) => {
+        const transcript =
+            event.results[0][0].transcript;
+
+        if (transcript) {
+            messageInput.value =
+                (
+                    messageInput.value
+                    ? messageInput.value + " "
+                    : ""
+                ) + transcript;
+
+            messageInput.dispatchEvent(
+                new Event("input")
+            );
+
+            messageInput.focus();
+        }
+    };
+
+    voiceRecognition.onerror = (
+        event
+    ) => {
+        console.error(
+            "Voice recognition error:",
+            event.error
+        );
+    };
+
+    voiceRecognition.onend = () => {
+        isRecordingVoice = false;
+
+        voiceBtn.classList.remove(
+            "recording"
+        );
+
+        voiceBtn.textContent = "🎤";
+        voiceBtn.title = "Voice input";
+    };
+
+    voiceBtn.addEventListener(
+        "click",
+        () => {
+            if (isRecordingVoice) {
+                voiceRecognition.stop();
+            } else {
+                voiceRecognition.start();
+            }
+        }
+    );
+
+} else if (voiceBtn) {
+    voiceBtn.disabled = true;
+    voiceBtn.title =
+        "Voice input is not supported in this browser";
+}
+
 const chatList =
     document.getElementById("chatList");
 
@@ -91,6 +356,21 @@ let conversationHistory = [];
 let searchInput = null;
 
 let editingMessageIndex = null;
+
+/* =========================================================
+   CHAT FOLDERS STATE
+   ========================================================= */
+
+let folders = [];
+let currentFolderId = null;
+let folderPicker = null;
+
+const folderList =
+    document.getElementById("folderList");
+
+const newFolderBtn =
+    document.getElementById("newFolderBtn");
+
 
 let currentTheme =
     localStorage.getItem("personalAI_theme") ||
@@ -217,6 +497,79 @@ if (logoutBtn) {
         }
     );
 }
+/* =========================================================
+   EXPORT CHAT
+   ========================================================= */
+
+document.addEventListener(
+    "click",
+    event => {
+
+        const exportButton =
+            event.target.closest("#exportChatBtn");
+
+        if (!exportButton) {
+            return;
+        }
+
+        if (!conversationHistory.length) {
+            alert("এই chat-এ কোনো message নেই।");
+            return;
+        }
+
+        let text =
+            "Personal AI Chat Export\n";
+
+        text +=
+            "========================\n\n";
+
+        conversationHistory.forEach(
+            message => {
+
+                const role =
+                    message.role === "user"
+                        ? "You"
+                        : "Personal AI";
+
+                text +=
+                    role + ":\n";
+
+                text +=
+                    (message.content || "") +
+                    "\n\n";
+            }
+        );
+
+        const blob =
+            new Blob(
+                [text],
+                {
+                    type:
+                        "text/plain;charset=utf-8"
+                }
+            );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const link =
+            document.createElement("a");
+
+        link.href = url;
+
+        link.download =
+            "personal-ai-chat.txt";
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        link.remove();
+
+        URL.revokeObjectURL(url);
+    }
+);
+
     if (app) {
         app.style.display = "none";
     }
@@ -229,6 +582,7 @@ function cacheChats() {
             id: chat.id,
             title: chat.title,
             pinned: Number(chat.pinned) || 0,
+            folder_id: chat.folder_id ?? null,
             messages: (chat.messages || []).map(item => ({
                 role: item.role,
                 content: item.content
@@ -314,46 +668,94 @@ function setCurrentChat(id) {
 /* =========================================================
    API HELPER
    ========================================================= */
+function showServerLoading() {
+    const loader =
+        document.getElementById("serverLoading");
 
+    if (loader) {
+        loader.style.display = "flex";
+    }
+}
+
+
+function hideServerLoading() {
+    const loader =
+        document.getElementById("serverLoading");
+
+    if (loader) {
+        loader.style.display = "none";
+    }
+}
 async function apiRequest(
     path,
     options = {}
 ) {
-    const response =
-        await fetch(
-            `${API_BASE}${path}`,
-            {
-                credentials: "include",
-                ...options
-            }
-        );
-
-    let data = null;
+    let loadingTimer = null;
 
     try {
-        data = await response.json();
-    } catch (error) {
-        data = null;
-    }
+        const controller =
+            new AbortController();
 
-    if (!response.ok) {
-        const message =
-            data &&
-            (
-                data.detail ||
-                data.message
-            )
-                ? (
+        const requestOptions = {
+            credentials: "include",
+            ...options,
+            signal: controller.signal
+        };
+
+        loadingTimer = setTimeout(
+            () => {
+                showServerLoading();
+            },
+            2500
+        );
+
+        const response =
+            await fetch(
+                `${API_BASE}${path}`,
+                requestOptions
+            );
+
+        clearTimeout(loadingTimer);
+        hideServerLoading();
+
+        let data = null;
+
+        try {
+            data = await response.json();
+        } catch (error) {
+            data = null;
+        }
+
+        if (!response.ok) {
+            const message =
+                data &&
+                (
                     data.detail ||
                     data.message
                 )
-                : `Server error: ${response.status}`;
+                    ? (
+                        data.detail ||
+                        data.message
+                    )
+                    : `Server error: ${response.status}`;
 
-        const error =
-            new Error(message);
+            const error =
+                new Error(message);
 
-        error.status =
-            response.status;
+            error.status =
+                response.status;
+
+            throw error;
+        }
+
+        return data;
+
+    } catch (error) {
+        if (loadingTimer) {
+            clearTimeout(loadingTimer);
+        }
+
+        hideServerLoading();
 
         throw error;
     }
@@ -465,6 +867,141 @@ function injectChatUIStyles() {
             font-size: 13px;
             text-align: center;
             padding: 14px 8px;
+        }
+
+        .folder-section {
+            margin: 12px 12px 8px;
+        }
+
+        .folder-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 8px;
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0.85;
+        }
+
+        .folder-add-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--card);
+            color: var(--text);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .folder-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .folder-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 10px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .folder-item:hover,
+        .folder-item.active {
+            background: var(--hover);
+            border-color: var(--border);
+        }
+
+        .folder-item-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            text-align: left;
+            font-size: 14px;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .folder-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .folder-action-btn {
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+        }
+
+        .folder-action-btn:hover {
+            background: var(--hover);
+            opacity: 1;
+        }
+
+        .personal-ai-folder-picker {
+            position: fixed;
+            z-index: 5000;
+            width: 190px;
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 6px;
+            box-sizing: border-box;
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.28);
+        }
+
+        .personal-ai-folder-picker-title {
+            padding: 7px 9px;
+            font-size: 12px;
+            opacity: 0.65;
+        }
+
+        .personal-ai-folder-picker-item {
+            width: 100%;
+            padding: 9px 10px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .personal-ai-folder-picker-item:hover,
+        .personal-ai-folder-picker-item.active {
+            background: var(--hover);
         }
 
         .copy-message-btn {
@@ -821,6 +1358,7 @@ if (loginForm) {
                 loginPassword.value =
                     "";
 
+                await loadFolders();
                 await loadCloudChats();
 
             } catch (error) {
@@ -869,6 +1407,8 @@ async function loadCloudChats() {
                         "New Chat",
                     pinned:
                         Number(chat.pinned) || 0,
+                    folder_id:
+                        chat.folder_id ?? null,
                     messages: []
                 }))
                 : [];
@@ -1031,6 +1571,8 @@ async function migrateLocalChats(
                     Number(
                         created.chat.pinned
                     ) || 0,
+                folder_id:
+                    created.chat.folder_id ?? null,
                 messages: []
             };
 
@@ -1114,11 +1656,21 @@ async function createChat(
                 "/chats",
                 {
                     method: "POST",
-                    body: makeFormData({
-                        title:
-                            title.trim() ||
-                            "New Chat"
-                    })
+                    body: makeFormData(
+                        {
+                            title:
+                                title.trim() ||
+                                "New Chat",
+                            ...(Number.isFinite(
+                                Number(currentFolderId)
+                            )
+                                ? {
+                                    folder_id:
+                                        String(currentFolderId)
+                                }
+                                : {})
+                        }
+                    )
                 }
             );
 
@@ -1138,6 +1690,8 @@ async function createChat(
                 "New Chat",
             pinned:
                 Number(remote.pinned) || 0,
+            folder_id:
+                remote.folder_id ?? null,
             messages: []
         };
 
@@ -1267,218 +1821,685 @@ function renderChatList(
         return;
     }
 
-    chatList.innerHTML =
-        "";
+    chatList.innerHTML = "";
 
-    const list =
+    let list =
         Array.isArray(sourceChats)
             ? sourceChats
             : [];
 
+    /* Folder filtering
+       All Chats = chats that are not inside any folder.
+       Selecting a folder shows only chats inside that folder. */
+    if (currentFolderId === null) {
+        list = list.filter(
+            chat =>
+                chat.folder_id === null ||
+                chat.folder_id === undefined
+        );
+    } else if (currentFolderId === "none") {
+        list = list.filter(
+            chat =>
+                chat.folder_id === null ||
+                chat.folder_id === undefined
+        );
+    } else {
+        list = list.filter(
+            chat =>
+                String(chat.folder_id) ===
+                String(currentFolderId)
+        );
+    }
+
     if (!list.length) {
 
         const empty =
-            document.createElement(
-                "div"
-            );
+            document.createElement("div");
 
         empty.className =
             "v21-empty-history";
 
         empty.textContent =
-            "No chats yet";
+            currentFolderId === null
+                ? "No chats yet"
+                : "No chats in this folder";
 
-        chatList.appendChild(
-            empty
-        );
+        chatList.appendChild(empty);
 
         return;
     }
 
-    list.forEach(
-        chat => {
+    list.forEach(chat => {
 
-            const row =
-                document.createElement(
-                    "div"
+        const row =
+            document.createElement("div");
+
+        row.className =
+            "v21-chat-row";
+
+        const button =
+            document.createElement("button");
+
+        button.type = "button";
+
+        button.className =
+            "history-item" +
+            (
+                String(chat.id) ===
+                String(currentChatId)
+                    ? " active"
+                    : ""
+            );
+
+        button.title =
+            chat.title || "New Chat";
+
+        button.textContent =
+            `${Number(chat.pinned) ? "📌 " : ""}` +
+            (chat.title || "New Chat");
+
+        button.addEventListener(
+            "click",
+            () => openChat(chat.id)
+        );
+
+        const actions =
+            document.createElement("div");
+
+        actions.className =
+            "v21-chat-actions";
+
+        /* PIN */
+        const pinBtn =
+            document.createElement("button");
+
+        pinBtn.type = "button";
+        pinBtn.className = "v21-chat-action";
+        pinBtn.textContent =
+            Number(chat.pinned) ? "📌" : "☆";
+        pinBtn.title =
+            Number(chat.pinned) ? "Unpin" : "Pin";
+
+        pinBtn.addEventListener(
+            "click",
+            async event => {
+                event.stopPropagation();
+                await togglePin(chat);
+            }
+        );
+
+        /* MOVE TO FOLDER */
+        const folderBtn =
+            document.createElement("button");
+
+        folderBtn.type = "button";
+        folderBtn.className = "v21-chat-action";
+        folderBtn.textContent = "📁";
+        folderBtn.title = "Move to Folder";
+
+        folderBtn.addEventListener(
+            "click",
+            event => {
+                event.stopPropagation();
+                openFolderPicker(
+                    chat,
+                    folderBtn
                 );
+            }
+        );
 
-            row.className =
-                "v21-chat-row";
+        /* RENAME */
+        const renameBtn =
+            document.createElement("button");
 
-            const button =
-                document.createElement(
-                    "button"
+        renameBtn.type = "button";
+        renameBtn.className = "v21-chat-action";
+        renameBtn.textContent = "✏️";
+        renameBtn.title = "Rename";
+
+        renameBtn.addEventListener(
+            "click",
+            async event => {
+                event.stopPropagation();
+                await renameChat(chat);
+            }
+        );
+
+        /* DELETE */
+        const deleteBtn =
+            document.createElement("button");
+
+        deleteBtn.type = "button";
+        deleteBtn.className = "v21-chat-action";
+        deleteBtn.textContent = "🗑️";
+        deleteBtn.title = "Delete";
+
+        deleteBtn.addEventListener(
+            "click",
+            async event => {
+                event.stopPropagation();
+                await deleteChat(chat);
+            }
+        );
+
+        actions.appendChild(pinBtn);
+        actions.appendChild(folderBtn);
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+
+        row.appendChild(button);
+        row.appendChild(actions);
+
+        chatList.appendChild(row);
+    });
+}
+
+/* =========================================================
+   CHAT FOLDERS
+   ========================================================= */
+
+function closeFolderPicker() {
+    if (folderPicker) {
+        folderPicker.remove();
+        folderPicker = null;
+    }
+}
+
+function openFolderPicker(chat, anchor) {
+    closeFolderPicker();
+
+    if (!folders.length) {
+        alert("আগে একটি folder তৈরি করো।");
+        return;
+    }
+
+    folderPicker =
+        document.createElement("div");
+
+    folderPicker.className =
+        "personal-ai-folder-picker";
+
+    const title =
+        document.createElement("div");
+
+    title.className =
+        "personal-ai-folder-picker-title";
+
+    title.textContent =
+        "Move to Folder";
+
+    folderPicker.appendChild(title);
+
+    const currentFolder =
+        chat.folder_id === null ||
+        chat.folder_id === undefined
+            ? null
+            : String(chat.folder_id);
+
+    folders.forEach(folder => {
+        const item =
+            document.createElement("button");
+
+        item.type = "button";
+        item.className =
+            "personal-ai-folder-picker-item";
+        item.textContent =
+            `📁 ${folder.name}`;
+
+        if (
+            String(folder.id) ===
+            currentFolder
+        ) {
+            item.classList.add("active");
+        }
+
+        item.addEventListener(
+            "click",
+            async () => {
+                closeFolderPicker();
+                await moveChatToFolder(
+                    chat,
+                    folder.id
                 );
+            }
+        );
 
-            button.type =
-                "button";
+        folderPicker.appendChild(item);
+    });
 
-            button.className =
-                "history-item" +
-                (
-                    String(chat.id) ===
-                    String(currentChatId)
-                        ? " active"
-                        : ""
+    /* Remove from current folder */
+    if (currentFolder !== null) {
+        const removeFolder =
+            document.createElement("button");
+
+        removeFolder.type = "button";
+        removeFolder.className =
+            "personal-ai-folder-picker-item";
+        removeFolder.textContent =
+            "↩️ Remove from Folder";
+
+        removeFolder.addEventListener(
+            "click",
+            async () => {
+                closeFolderPicker();
+                await moveChatToFolder(
+                    chat,
+                    null
                 );
+            }
+        );
 
-            button.title =
-                chat.title ||
-                "New Chat";
+        folderPicker.appendChild(removeFolder);
+    }
 
-            button.textContent =
-                `${Number(chat.pinned) ? "📌 " : ""}` +
-                (
-                    chat.title ||
-                    "New Chat"
-                );
+    document.body.appendChild(folderPicker);
 
-            button.addEventListener(
-                "click",
-                () => {
-                    openChat(
-                        chat.id
-                    );
-                }
-            );
+    const rect =
+        anchor.getBoundingClientRect();
 
-            const actions =
-                document.createElement(
-                    "div"
-                );
+    const pickerWidth = 190;
 
-            actions.className =
-                "v21-chat-actions";
+    let left =
+        rect.right + 8;
 
+    if (
+        left + pickerWidth >
+        window.innerWidth - 10
+    ) {
+        left =
+            rect.left - pickerWidth - 8;
+    }
 
-            /* PIN */
+    let top =
+        rect.top;
 
-            const pinBtn =
-                document.createElement(
-                    "button"
-                );
+    const pickerHeight =
+        Math.min(
+            folderPicker.offsetHeight,
+            320
+        );
 
-            pinBtn.type =
-                "button";
+    if (
+        top + pickerHeight >
+        window.innerHeight - 10
+    ) {
+        top =
+            window.innerHeight -
+            pickerHeight - 10;
+    }
 
-            pinBtn.className =
-                "v21-chat-action";
+    folderPicker.style.left =
+        `${Math.max(10, left)}px`;
 
-            pinBtn.textContent =
-                Number(chat.pinned)
-                    ? "📌"
-                    : "☆";
+    folderPicker.style.top =
+        `${Math.max(10, top)}px`;
+}
 
-            pinBtn.title =
-                Number(chat.pinned)
-                    ? "Unpin"
-                    : "Pin";
+async function moveChatToFolder(
+    chat,
+    folderId
+) {
 
-            pinBtn.addEventListener(
-                "click",
-                async event => {
+    try {
+        const formData =
+            new FormData();
 
-                    event.stopPropagation();
-
-                    await togglePin(
-                        chat
-                    );
-                }
-            );
-
-
-            /* RENAME */
-
-            const renameBtn =
-                document.createElement(
-                    "button"
-                );
-
-            renameBtn.type =
-                "button";
-
-            renameBtn.className =
-                "v21-chat-action";
-
-            renameBtn.textContent =
-                "✏️";
-
-            renameBtn.title =
-                "Rename";
-
-            renameBtn.addEventListener(
-                "click",
-                async event => {
-
-                    event.stopPropagation();
-
-                    await renameChat(
-                        chat
-                    );
-                }
-            );
-
-
-            /* DELETE */
-
-            const deleteBtn =
-                document.createElement(
-                    "button"
-                );
-
-            deleteBtn.type =
-                "button";
-
-            deleteBtn.className =
-                "v21-chat-action";
-
-            deleteBtn.textContent =
-                "🗑️";
-
-            deleteBtn.title =
-                "Delete";
-
-            deleteBtn.addEventListener(
-                "click",
-                async event => {
-
-                    event.stopPropagation();
-
-                    await deleteChat(
-                        chat
-                    );
-                }
-            );
-
-
-            actions.appendChild(
-                pinBtn
-            );
-
-            actions.appendChild(
-                renameBtn
-            );
-
-            actions.appendChild(
-                deleteBtn
-            );
-
-
-            row.appendChild(
-                button
-            );
-
-            row.appendChild(
-                actions
-            );
-
-            chatList.appendChild(
-                row
+        if (folderId !== null) {
+            formData.append(
+                "folder_id",
+                String(folderId)
             );
         }
+
+        const data =
+            await apiRequest(
+                `/chats/${encodeURIComponent(chat.id)}/folder`,
+                {
+                    method: "PATCH",
+                    body: formData
+                }
+            );
+
+        const updated =
+            data.chat || {};
+
+        chat.folder_id =
+            updated.folder_id ?? folderId;
+
+        cacheChats();
+        renderFolders();
+        renderChatList();
+
+    } catch (error) {
+        console.error(
+            "Move chat to folder error:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Chat folder-এ নেওয়া যায়নি।"
+        );
+    }
+}
+
+async function loadFolders() {
+
+    if (!folderList) {
+        return;
+    }
+
+    try {
+        const data =
+            await apiRequest("/folders");
+
+        folders =
+            Array.isArray(data.folders)
+                ? data.folders
+                : [];
+
+        renderFolders();
+
+    } catch (error) {
+        console.error(
+            "Failed to load folders:",
+            error
+        );
+    }
+}
+
+function renderFolders() {
+
+    if (!folderList) {
+        return;
+    }
+
+    folderList.innerHTML = "";
+
+    /* All Chats */
+    const allItem =
+        document.createElement("button");
+
+    allItem.type = "button";
+    allItem.className =
+        "folder-item" +
+        (
+            currentFolderId === null
+                ? " active"
+                : ""
+        );
+
+    allItem.innerHTML =
+        '<span class="folder-item-name">💬 All Chats</span>';
+
+    allItem.addEventListener(
+        "click",
+        () => {
+            currentFolderId = null;
+            closeFolderPicker();
+            renderFolders();
+            renderChatList();
+        }
+    );
+
+    folderList.appendChild(allItem);
+
+    folders.forEach(folder => {
+
+        const item =
+            document.createElement("div");
+
+        item.className =
+            "folder-item" +
+            (
+                String(folder.id) ===
+                String(currentFolderId)
+                    ? " active"
+                    : ""
+            );
+
+        const name =
+            document.createElement("button");
+
+        name.type = "button";
+        name.className =
+            "folder-item-name";
+        name.textContent =
+            `📁 ${folder.name}`;
+
+        name.addEventListener(
+            "click",
+            () => {
+                currentFolderId =
+                    folder.id;
+                closeFolderPicker();
+                renderFolders();
+                renderChatList();
+            }
+        );
+
+        const actions =
+            document.createElement("div");
+
+        actions.className =
+            "folder-item-actions";
+
+        const renameBtn =
+            document.createElement("button");
+
+        renameBtn.type = "button";
+        renameBtn.className =
+            "folder-action-btn";
+        renameBtn.textContent = "✏️";
+        renameBtn.title = "Rename folder";
+
+        renameBtn.addEventListener(
+            "click",
+            async event => {
+                event.stopPropagation();
+                await renameFolder(folder);
+            }
+        );
+
+        const deleteBtn =
+            document.createElement("button");
+
+        deleteBtn.type = "button";
+        deleteBtn.className =
+            "folder-action-btn";
+        deleteBtn.textContent = "🗑️";
+        deleteBtn.title = "Delete folder";
+
+        deleteBtn.addEventListener(
+            "click",
+            async event => {
+                event.stopPropagation();
+                await deleteFolder(folder);
+            }
+        );
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+
+        item.appendChild(name);
+        item.appendChild(actions);
+
+        folderList.appendChild(item);
+    });
+}
+
+async function createFolder() {
+
+    const name =
+        window.prompt("Folder name:");
+
+    if (!name || !name.trim()) {
+        return;
+    }
+
+    try {
+        await apiRequest(
+            "/folders",
+            {
+                method: "POST",
+                body: makeFormData({
+                    name: name.trim()
+                })
+            }
+        );
+
+        await loadFolders();
+
+    } catch (error) {
+        console.error(
+            "Create folder error:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Folder তৈরি করা যায়নি।"
+        );
+    }
+}
+
+async function renameFolder(folder) {
+
+    const name =
+        window.prompt(
+            "Folder name:",
+            folder.name || ""
+        );
+
+    if (name === null) {
+        return;
+    }
+
+    if (!name.trim()) {
+        return;
+    }
+
+    try {
+        const data =
+            await apiRequest(
+                `/folders/${encodeURIComponent(folder.id)}/rename`,
+                {
+                    method: "PATCH",
+                    body: makeFormData({
+                        name: name.trim()
+                    })
+                }
+            );
+
+        const updated =
+            data.folder || {};
+
+        folder.name =
+            updated.name ||
+            name.trim();
+
+        renderFolders();
+
+    } catch (error) {
+        console.error(
+            "Rename folder error:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Folder rename করা যায়নি।"
+        );
+    }
+}
+
+async function deleteFolder(folder) {
+
+    const confirmed =
+        window.confirm(
+            `"${folder.name}" folder delete করতে চাও?\n\nFolder-এর chat delete হবে না।`
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        await apiRequest(
+            `/folders/${encodeURIComponent(folder.id)}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        chats.forEach(chat => {
+            if (
+                String(chat.folder_id) ===
+                String(folder.id)
+            ) {
+                chat.folder_id = null;
+            }
+        });
+
+        if (
+            String(currentFolderId) ===
+            String(folder.id)
+        ) {
+            currentFolderId = null;
+        }
+
+        folders =
+            folders.filter(
+                item =>
+                    String(item.id) !==
+                    String(folder.id)
+            );
+
+        cacheChats();
+        renderFolders();
+        renderChatList();
+
+    } catch (error) {
+        console.error(
+            "Delete folder error:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Folder delete করা যায়নি।"
+        );
+    }
+}
+
+if (newFolderBtn) {
+    newFolderBtn.addEventListener(
+        "click",
+        createFolder
     );
 }
+
+document.addEventListener(
+    "click",
+    event => {
+        if (
+            folderPicker &&
+            !folderPicker.contains(event.target) &&
+            !event.target.closest("[title='Move to Folder']")
+        ) {
+            closeFolderPicker();
+        }
+    }
+);
+
+document.addEventListener(
+    "keydown",
+    event => {
+        if (event.key === "Escape") {
+            closeFolderPicker();
+        }
+    }
+);
 
 
 /* =========================================================
@@ -2216,23 +3237,31 @@ function addMessage(
                     ? `
                         <div class="ai-message-actions">
 
-                            <button
-                                class="copy-message-btn"
-                                type="button"
-                                title="Copy"
-                            >
-                                📋 Copy
-                            </button>
+    <button
+        class="copy-message-btn"
+        type="button"
+        title="Copy"
+    >
+        📋 Copy
+    </button>
 
-                            <button
-                                class="regenerate-message-btn"
-                                type="button"
-                                title="Regenerate"
-                            >
-                                🔄 Regenerate
-                            </button>
+    <button
+        class="copy-message-btn read-aloud-message-btn"
+        type="button"
+        title="Read aloud"
+    >
+        🔊 Read
+    </button>
 
-                        </div>
+    <button
+        class="regenerate-message-btn"
+        type="button"
+        title="Regenerate"
+    >
+        🔄 Regenerate
+    </button>
+
+</div>
                     `
                     : `
                         <div class="user-message-actions">
@@ -2371,6 +3400,52 @@ function addMessage(
             message.querySelector(
                 ".copy-message-btn"
             );
+
+        const readAloudBtn =
+            message.querySelector(
+                 ".read-aloud-message-btn"
+            );
+if (readAloudBtn) {
+    readAloudBtn.addEventListener(
+        "click",
+        () => {
+            if (!("speechSynthesis" in window)) {
+                alert(
+                    "এই browser-এ voice reply support নেই।"
+                );
+                return;
+            }
+
+            speechSynthesis.cancel();
+
+            const utterance =
+                new SpeechSynthesisUtterance(
+                    text || ""
+                );
+
+            utterance.lang = "bn-BD";
+            utterance.rate = 1;
+            utterance.pitch = 1;
+
+            readAloudBtn.textContent =
+                "⏹️ Stop";
+
+            utterance.onend = () => {
+                readAloudBtn.textContent =
+                    "🔊 Read";
+            };
+
+            utterance.onerror = () => {
+                readAloudBtn.textContent =
+                    "🔊 Read";
+            };
+
+            speechSynthesis.speak(
+                utterance
+            );
+        }
+    );
+}
 
         const regenerateBtn =
             message.querySelector(
@@ -2919,7 +3994,8 @@ if (chatForm) {
 
 if (
     !message &&
-    !selectedImage
+    !selectedImage &&
+    !selectedFile
 ) {
     return;
 }
@@ -3036,8 +4112,20 @@ sendBtn.disabled =
                    ----------------------------------------- */
 
                 const userText =
-                    message ||
-                    "Image uploaded";
+    message ||
+    (
+        selectedFile
+            ? `📄 ${selectedFile.name}`
+            : "Image uploaded"
+    );
+
+const aiMessage =
+    message ||
+    (
+        selectedFile
+            ? "Please analyze the attached file."
+            : ""
+    );
 
                 addMessage(
                     "user",
@@ -3101,7 +4189,20 @@ sendBtn.disabled =
                    ----------------------------------------- */
 
                 let response;
+let requestHistory =
+    conversationHistory.slice(
+        0,
+        -1
+    );
 
+if (selectedFile) {
+    requestHistory.push({
+        role: "user",
+        content:
+            `Attached file: ${selectedFile.name}\n\n` +
+            selectedFile.text
+    });
+}
 
                 if (imageToSend) {
 
@@ -3114,19 +4215,16 @@ sendBtn.disabled =
                     );
 
                     formData.append(
-                        "image",
-                        imageToSend
-                    );
+    "message",
+    aiMessage
+);
 
-                    formData.append(
-                        "history",
-                        JSON.stringify(
-                            conversationHistory.slice(
-                                0,
-                                -1
-                            )
-                        )
-                    );
+formData.append(
+    "history",
+    JSON.stringify(
+        requestHistory
+    )
+);
 
                     response =
                         await apiRequest(
@@ -3145,16 +4243,13 @@ sendBtn.disabled =
 
                     formData.append(
                         "message",
-                        message
-                    );
+                         aiMessage
+                     );
 
                     formData.append(
                         "history",
                         JSON.stringify(
-                            conversationHistory.slice(
-                                0,
-                                -1
-                            )
+                           requestHistory
                         )
                     );
 
@@ -3271,6 +4366,10 @@ sendBtn.disabled =
 
                 selectedImage =
                     null;
+
+                selectedFile = null;
+
+                fileInput.value = "";
 
                 imageInput.value =
                     "";
@@ -3660,6 +4759,7 @@ async function initializeApp() {
         return;
     }
 
+    await loadFolders();
     await loadCloudChats();
 }
 
@@ -3669,3 +4769,4 @@ async function initializeApp() {
    ========================================================= */
 
 initializeApp();
+
