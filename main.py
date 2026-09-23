@@ -386,14 +386,49 @@ async def test_d1(
 @app.post("/chats")
 async def create_chat(
     title: str = Form("New Chat"),
-    folder_id: int | None = Form(None),
+    folder_id: str | None = Form(None),
     username: str = Depends(require_login),
 ):
-    title = title.strip() or "New Chat"
+    title = (title or "").strip() or "New Chat"
+
+    # folder_id safely convert
+    parsed_folder_id = None
+
+    if folder_id is not None:
+        folder_id = folder_id.strip()
+
+        if folder_id:
+            try:
+                parsed_folder_id = int(folder_id)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid folder ID",
+                )
+
+    # If folder_id exists, make sure the folder exists
+    if parsed_folder_id is not None:
+        folder_result = await d1_query(
+            """
+            SELECT id
+            FROM folders
+            WHERE id = ?
+            """,
+            [parsed_folder_id],
+        )
+
+        if not folder_result.get("results", []):
+            raise HTTPException(
+                status_code=404,
+                detail="Folder not found",
+            )
 
     result = await d1_query(
         """
-        INSERT INTO chats (title, folder_id)
+        INSERT INTO chats (
+            title,
+            folder_id
+        )
         VALUES (?, ?)
         RETURNING
             id,
@@ -403,12 +438,23 @@ async def create_chat(
             created_at,
             updated_at
         """,
-        [title, folder_id],
+        [
+            title,
+            parsed_folder_id,
+        ],
     )
+
+    rows = result.get("results", [])
+
+    if not rows:
+        raise HTTPException(
+            status_code=500,
+            detail="Chat create failed",
+        )
 
     return {
         "success": True,
-        "chat": result.get("results", [])[0],
+        "chat": rows[0],
     }
 # =========================
 # FOLDER API
