@@ -40,7 +40,6 @@ const chatForm =
 
 const messageInput =
     document.getElementById("messageInput");
-
 const messages =
     document.getElementById("messages");
 
@@ -353,6 +352,57 @@ let currentChatId =
 
 let conversationHistory = [];
 
+// =========================
+// CHAT CONTEXT INDICATOR
+// =========================
+
+const contextIndicator =
+    document.createElement("div");
+
+contextIndicator.id =
+    "contextIndicator";
+
+contextIndicator.textContent =
+    "🧠 Context: 0 / 30 messages";
+
+contextIndicator.style.cssText = `
+    margin: 0 0 6px 4px;
+    font-size: 11px;
+    line-height: 1.3;
+    color: var(--muted-text, #888);
+    opacity: 0.72;
+`;
+
+const chatFormElement =
+    document.getElementById("chatForm");
+
+if (
+    chatFormElement &&
+    chatFormElement.parentElement
+) {
+    chatFormElement.parentElement.insertBefore(
+        contextIndicator,
+        chatFormElement
+    );
+}
+
+function updateContextIndicator() {
+
+    const count =
+        Array.isArray(conversationHistory)
+            ? Math.min(
+                conversationHistory.length,
+                30
+            )
+            : 0;
+
+    contextIndicator.textContent =
+        `🧠 Context: ${count} / 30 messages`;
+}
+
+updateContextIndicator();
+
+
 let searchInput = null;
 
 let editingMessageIndex = null;
@@ -398,15 +448,348 @@ const themeBtn =
     document.getElementById("themeBtn");
 
 
-if (themeBtn) {
+/* =========================================================
+   SETTINGS PANEL — STEP 1
+   ========================================================= */
 
-    themeBtn.textContent =
-        currentTheme === "dark"
-            ? "🌙 Dark Mode"
-            : "☀️ Light Mode";
+let settingsPanel = null;
+
+let contextIndicatorEnabled =
+    localStorage.getItem(
+        "personalAI_contextIndicator"
+    ) !== "false";
+    
+let enterToSendEnabled =
+    localStorage.getItem(
+        "personalAI_enterToSend"
+    ) !== "false";
+
+let messageTimestampEnabled =
+    localStorage.getItem(
+        "personalAI_messageTimestamp"
+    ) !== "false";
 
 
-    themeBtn.addEventListener(
+function applyContextIndicatorSetting() {
+
+    if (!contextIndicator) {
+        return;
+    }
+
+    contextIndicator.style.display =
+        contextIndicatorEnabled
+            ? "block"
+            : "none";
+}
+
+
+function applyMessageTimestampSetting() {
+
+    document
+        .querySelectorAll(
+            ".message-timestamp"
+        )
+        .forEach(element => {
+            element.style.display =
+                messageTimestampEnabled
+                    ? ""
+                    : "none";
+        });
+}
+
+
+applyContextIndicatorSetting();
+
+
+function injectSettingsStyles() {
+
+    if (
+        document.getElementById(
+            "personal-ai-settings-styles"
+        )
+    ) {
+        return;
+    }
+
+    const style =
+        document.createElement("style");
+
+    style.id =
+        "personal-ai-settings-styles";
+
+    style.textContent = `
+        .personal-ai-settings-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 6000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.42);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+
+        .personal-ai-settings-panel {
+            width: min(92vw, 430px);
+            max-height: min(82vh, 620px);
+            overflow-y: auto;
+            box-sizing: border-box;
+            padding: 18px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--card);
+            color: var(--text);
+            box-shadow: 0 20px 55px rgba(0, 0, 0, 0.28);
+        }
+
+        .personal-ai-settings-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .personal-ai-settings-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .personal-ai-settings-close {
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--hover);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .personal-ai-settings-section {
+            margin-top: 14px;
+        }
+
+        .personal-ai-settings-section-title {
+            margin-bottom: 7px;
+            font-size: 12px;
+            font-weight: 700;
+            opacity: 0.6;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .personal-ai-settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            padding: 11px 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            background: var(--hover);
+            color: var(--text);
+        }
+
+        .personal-ai-settings-row + .personal-ai-settings-row {
+            margin-top: 7px;
+        }
+
+        .personal-ai-settings-row-main {
+            min-width: 0;
+        }
+
+        .personal-ai-settings-row-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .personal-ai-settings-row-subtitle {
+            margin-top: 2px;
+            font-size: 11px;
+            opacity: 0.58;
+        }
+
+        .personal-ai-settings-action {
+            flex-shrink: 0;
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--card);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .personal-ai-settings-action:hover,
+        .personal-ai-settings-close:hover {
+            filter: brightness(1.06);
+        }
+
+        @media (max-width: 700px) {
+            .personal-ai-settings-overlay {
+                padding: 12px;
+            }
+
+            .personal-ai-settings-panel {
+                width: 100%;
+                max-height: 86vh;
+                border-radius: 14px;
+            }
+        }
+    `;
+
+    document.head.appendChild(style);
+}
+
+
+function closeSettingsPanel() {
+
+    if (settingsPanel) {
+        settingsPanel.remove();
+        settingsPanel = null;
+        document.body.style.overflow = "";
+    }
+}
+
+
+function openSettingsPanel() {
+
+    closeSettingsPanel();
+    injectSettingsStyles();
+
+    settingsPanel =
+        document.createElement("div");
+
+    settingsPanel.className =
+        "personal-ai-settings-overlay";
+
+    settingsPanel.setAttribute(
+        "role",
+        "dialog"
+    );
+
+    settingsPanel.setAttribute(
+        "aria-modal",
+        "true"
+    );
+
+    const panel =
+        document.createElement("div");
+
+    panel.className =
+        "personal-ai-settings-panel";
+
+    panel.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
+        }
+    );
+
+    const head =
+        document.createElement("div");
+
+    head.className =
+        "personal-ai-settings-head";
+
+    const title =
+        document.createElement("div");
+
+    title.className =
+        "personal-ai-settings-title";
+
+    title.textContent =
+        "⚙️ Settings";
+
+    const closeBtn =
+        document.createElement("button");
+
+    closeBtn.type = "button";
+    closeBtn.className =
+        "personal-ai-settings-close";
+    closeBtn.textContent = "✕";
+    closeBtn.title = "Close";
+
+    closeBtn.addEventListener(
+        "click",
+        closeSettingsPanel
+    );
+
+    head.appendChild(title);
+    head.appendChild(closeBtn);
+
+    const appearanceSection =
+        document.createElement("div");
+
+    appearanceSection.className =
+        "personal-ai-settings-section";
+
+    const appearanceTitle =
+        document.createElement("div");
+
+    appearanceTitle.className =
+        "personal-ai-settings-section-title";
+
+    appearanceTitle.textContent =
+        "Appearance";
+
+    const themeRow =
+        document.createElement("div");
+
+    themeRow.className =
+        "personal-ai-settings-row";
+
+    const themeInfo =
+        document.createElement("div");
+
+    themeInfo.className =
+        "personal-ai-settings-row-main";
+
+    const themeName =
+        document.createElement("div");
+
+    themeName.className =
+        "personal-ai-settings-row-title";
+
+    themeName.textContent =
+        "Theme";
+
+    const themeSubtitle =
+        document.createElement("div");
+
+    themeSubtitle.className =
+        "personal-ai-settings-row-subtitle";
+
+    themeSubtitle.textContent =
+        "Change between dark and light mode.";
+
+    themeInfo.appendChild(themeName);
+    themeInfo.appendChild(themeSubtitle);
+
+    const themeAction =
+        document.createElement("button");
+
+    themeAction.type = "button";
+    themeAction.className =
+        "personal-ai-settings-action";
+
+    const updateThemeAction =
+        () => {
+            themeAction.textContent =
+                currentTheme === "dark"
+                    ? "🌙 Dark Mode"
+                    : "☀️ Light Mode";
+        };
+
+    updateThemeAction();
+
+    themeAction.addEventListener(
         "click",
         () => {
 
@@ -416,14 +799,323 @@ if (themeBtn) {
                     : "dark";
 
             applyTheme();
+            updateThemeAction();
 
-            themeBtn.textContent =
-                currentTheme === "dark"
-                    ? "🌙 Dark Mode"
-                    : "☀️ Light Mode";
+            if (themeBtn) {
+                themeBtn.title =
+                    "Open Settings";
+            }
         }
     );
+
+    themeRow.appendChild(themeInfo);
+    themeRow.appendChild(themeAction);
+
+    appearanceSection.appendChild(
+        appearanceTitle
+    );
+
+    appearanceSection.appendChild(
+        themeRow
+    );
+
+    const chatSection =
+        document.createElement("div");
+
+    chatSection.className =
+        "personal-ai-settings-section";
+
+    const chatTitle =
+        document.createElement("div");
+
+    chatTitle.className =
+        "personal-ai-settings-section-title";
+
+    chatTitle.textContent =
+        "Chat";
+
+    const contextRow =
+        document.createElement("div");
+
+    contextRow.className =
+        "personal-ai-settings-row";
+
+    const contextInfo =
+        document.createElement("div");
+
+    contextInfo.className =
+        "personal-ai-settings-row-main";
+
+    const contextName =
+        document.createElement("div");
+
+    contextName.className =
+        "personal-ai-settings-row-title";
+
+    contextName.textContent =
+        "🧠 Context Indicator";
+
+    const contextSubtitle =
+        document.createElement("div");
+
+    contextSubtitle.className =
+        "personal-ai-settings-row-subtitle";
+
+    contextSubtitle.textContent =
+        "Shows the current conversation context.";
+
+    contextInfo.appendChild(contextName);
+    contextInfo.appendChild(
+        contextSubtitle
+    );
+
+    const contextAction =
+        document.createElement("button");
+
+    contextAction.type = "button";
+    contextAction.className =
+        "personal-ai-settings-action";
+
+    const updateContextAction =
+        () => {
+            contextAction.textContent =
+                contextIndicatorEnabled
+                    ? "On"
+                    : "Off";
+        };
+
+    updateContextAction();
+
+    contextAction.addEventListener(
+        "click",
+        () => {
+
+            contextIndicatorEnabled =
+                !contextIndicatorEnabled;
+
+            localStorage.setItem(
+                "personalAI_contextIndicator",
+                String(
+                    contextIndicatorEnabled
+                )
+            );
+
+            applyContextIndicatorSetting();
+            updateContextAction();
+        }
+    );
+
+    contextRow.appendChild(contextInfo);
+    contextRow.appendChild(
+        contextAction
+    );
+
+    const timestampRow =
+        document.createElement("div");
+
+    timestampRow.className =
+        "personal-ai-settings-row";
+
+    const timestampInfo =
+        document.createElement("div");
+
+    timestampInfo.className =
+        "personal-ai-settings-row-main";
+
+    const timestampName =
+        document.createElement("div");
+
+    timestampName.className =
+        "personal-ai-settings-row-title";
+
+    timestampName.textContent =
+        "🕐 Message Timestamp";
+
+    const timestampSubtitle =
+        document.createElement("div");
+
+    timestampSubtitle.className =
+        "personal-ai-settings-row-subtitle";
+
+    timestampSubtitle.textContent =
+        "Show or hide message date and time.";
+
+    timestampInfo.appendChild(
+        timestampName
+    );
+
+    timestampInfo.appendChild(
+        timestampSubtitle
+    );
+
+    const timestampAction =
+        document.createElement("button");
+
+    timestampAction.type = "button";
+    timestampAction.className =
+        "personal-ai-settings-action";
+
+    const updateTimestampAction =
+        () => {
+            timestampAction.textContent =
+                messageTimestampEnabled
+                    ? "On"
+                    : "Off";
+        };
+
+    updateTimestampAction();
+
+    timestampAction.addEventListener(
+        "click",
+        () => {
+
+            messageTimestampEnabled =
+                !messageTimestampEnabled;
+
+            localStorage.setItem(
+                "personalAI_messageTimestamp",
+                String(
+                    messageTimestampEnabled
+                )
+            );
+
+            applyMessageTimestampSetting();
+            updateTimestampAction();
+        }
+    );
+
+    timestampRow.appendChild(
+        timestampInfo
+    );
+
+    timestampRow.appendChild(
+        timestampAction
+    );
+const enterRow =
+    document.createElement("div");
+
+enterRow.className =
+    "personal-ai-settings-row";
+
+const enterInfo =
+    document.createElement("div");
+
+enterInfo.className =
+    "personal-ai-settings-row-main";
+
+const enterName =
+    document.createElement("div");
+
+enterName.className =
+    "personal-ai-settings-row-title";
+
+enterName.textContent =
+    "↵ Enter to Send";
+
+const enterSubtitle =
+    document.createElement("div");
+
+enterSubtitle.className =
+    "personal-ai-settings-row-subtitle";
+
+enterSubtitle.textContent =
+    "Press Enter to send, Shift + Enter for a new line.";
+
+enterInfo.appendChild(enterName);
+enterInfo.appendChild(enterSubtitle);
+
+const enterAction =
+    document.createElement("button");
+
+enterAction.type = "button";
+enterAction.className =
+    "personal-ai-settings-action";
+
+const updateEnterAction =
+    () => {
+        enterAction.textContent =
+            enterToSendEnabled
+                ? "On"
+                : "Off";
+    };
+
+updateEnterAction();
+
+enterAction.addEventListener(
+    "click",
+    () => {
+
+        enterToSendEnabled =
+            !enterToSendEnabled;
+
+        localStorage.setItem(
+            "personalAI_enterToSend",
+            String(
+                enterToSendEnabled
+            )
+        );
+
+        updateEnterAction();
+    }
+);
+
+enterRow.appendChild(enterInfo);
+enterRow.appendChild(enterAction);
+
+chatSection.appendChild(enterRow);
+    chatSection.appendChild(chatTitle);
+    chatSection.appendChild(contextRow);
+    chatSection.appendChild(timestampRow);
+
+    panel.appendChild(head);
+    panel.appendChild(appearanceSection);
+    panel.appendChild(chatSection);
+
+    settingsPanel.appendChild(panel);
+
+    settingsPanel.addEventListener(
+        "click",
+        closeSettingsPanel
+    );
+
+    document.body.appendChild(
+        settingsPanel
+    );
+
+    document.body.style.overflow =
+        "hidden";
+
+    closeBtn.focus();
 }
+
+
+if (themeBtn) {
+
+    themeBtn.textContent =
+        "⚙️ Settings";
+
+    themeBtn.title =
+        "Open Settings";
+
+    themeBtn.addEventListener(
+        "click",
+        openSettingsPanel
+    );
+}
+
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key === "Escape" &&
+            settingsPanel
+        ) {
+            closeSettingsPanel();
+        }
+    }
+);
 
 
 /* =========================================================
@@ -490,6 +1182,7 @@ if (logoutBtn) {
             currentChatId = null;
 
             conversationHistory = [];
+        updateContextIndicator();
 
             localStorage.removeItem(
                 "personalAI_currentChat"
@@ -585,7 +1278,9 @@ function cacheChats() {
             folder_id: chat.folder_id ?? null,
             messages: (chat.messages || []).map(item => ({
                 role: item.role,
-                content: item.content
+                content: item.content,
+                created_at:
+                    item.created_at || null
             }))
         }));
 
@@ -1451,6 +2146,8 @@ async function loadCloudChats() {
             conversationHistory =
                 [];
 
+            updateContextIndicator();
+
             renderMessages(null);
 
             return;
@@ -1516,10 +2213,12 @@ async function loadCloudChats() {
                         content: item.content
                     })
                 );
+                updateContextIndicator();
 
             renderMessages(
                 target
             );
+            updateContextIndicator();
 
         } else {
 
@@ -1661,14 +2360,18 @@ async function createChat(
                             title:
                                 title.trim() ||
                                 "New Chat",
-                            ...(Number.isFinite(
-                                Number(currentFolderId)
-                            )
-                                ? {
-                                    folder_id:
-                                        String(currentFolderId)
-                                }
-                                : {})
+                            ...(
+    currentFolderId !== null &&
+    currentFolderId !== "none" &&
+    Number.isFinite(
+        Number(currentFolderId)
+    )
+        ? {
+            folder_id:
+                String(currentFolderId)
+        }
+        : {}
+)
                         }
                     )
                 }
@@ -1705,6 +2408,8 @@ async function createChat(
 
         conversationHistory =
             [];
+
+        updateContextIndicator();
 
         cacheChats();
 
@@ -1759,18 +2464,20 @@ const data =
         `/chats/${encodeURIComponent(chat.id)}/messages`
     );
         chat.messages =
-            Array.isArray(data.messages)
-                ? data.messages.map(
-                    item => ({
-                        id: item.id,
-                        chat_id:
-                            item.chat_id,
-                        role: item.role,
-                        content:
-                            item.content
-                    })
-                )
-                : [];
+    Array.isArray(data.messages)
+        ? data.messages.map(
+            item => ({
+                id: item.id,
+                chat_id:
+                    item.chat_id,
+                role: item.role,
+                content:
+                    item.content,
+                created_at:
+                    item.created_at
+            })
+        )
+        : [];
 
     } catch (error) {
 
@@ -1791,6 +2498,7 @@ const data =
                 content: item.content
             })
         );
+        updateContextIndicator();
 
     renderMessages(
         chat
@@ -2743,6 +3451,7 @@ async function deleteChat(
                 renderMessages(
                     null
                 );
+                updateContextIndicator();
             }
         }
 
@@ -2808,14 +3517,14 @@ function renderMessages(
         item => {
 
             addMessage(
-                item.role === "user"
-                    ? "user"
-                    : "ai",
-                item.content,
-                item.imageUrl ||
-                    null,
-                false
-            );
+    item.role === "user"
+        ? "user"
+        : "ai",
+    item.content,
+    item.imageUrl || null,
+    false,
+    item.created_at || null
+);
         }
     );
 
@@ -3120,6 +3829,7 @@ async function regenerateMessage(messageElement) {
                     content: item.content
                 })
             );
+            updateContextIndicator();
 
         if (textElement) {
             textElement.classList.remove(
@@ -3186,9 +3896,14 @@ function addMessage(
     type,
     text,
     imageUrl = null,
-    shouldScroll = true
+    shouldScroll = true,
+    createdAt = null
 ) {
 
+    if (!createdAt) {
+        createdAt =
+            new Date().toISOString();
+    }
     const welcome =
         document.getElementById(
             "welcome"
@@ -3231,7 +3946,7 @@ function addMessage(
             </div>
 
             <div class="message-text"></div>
-
+            <div class="message-timestamp"></div>
                         ${
                 type === "ai"
                     ? `
@@ -3289,6 +4004,41 @@ function addMessage(
         textElement.textContent =
             text;
     }
+const timestampElement =
+    message.querySelector(
+        ".message-timestamp"
+    );
+
+if (timestampElement && createdAt) {
+
+    const date =
+        new Date(
+            createdAt.replace(" ", "T") + "Z"
+        );
+
+    if (!isNaN(date.getTime())) {
+
+        timestampElement.textContent =
+            date.toLocaleString(
+                "en-US",
+                {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true
+                }
+            );
+    }
+}
+
+if (timestampElement) {
+    timestampElement.style.display =
+        messageTimestampEnabled
+            ? ""
+            : "none";
+}
 
     /* IMAGE */
     if (imageUrl) {
@@ -3931,6 +4681,7 @@ async function editMessage(
                         item.content
                 })
             );
+            updateContextIndicator();
 
 
         /* -----------------------------------------
@@ -4130,7 +4881,9 @@ const aiMessage =
                 addMessage(
                     "user",
                     userText,
-                    imageUrl
+                    imageUrl,
+                    true,
+                    new Date().toISOString()
                 );
 
                 chat.messages =
@@ -4141,7 +4894,9 @@ const aiMessage =
                         "user",
                     content:
                         userText,
-                    imageUrl
+                    imageUrl,
+                    created_at:
+                        new Date().toISOString()
                 });
 
                 conversationHistory.push({
@@ -4151,6 +4906,7 @@ const aiMessage =
                         userText
                 });
 
+                updateContextIndicator();
                 const savedUser =
                     await saveMessageToCloud(
                         chat.id,
@@ -4278,14 +5034,19 @@ formData.append(
 
                 addMessage(
                     "ai",
-                    aiReply
+                    aiReply,
+                    null,
+                    true,
+                    new Date().toISOString()
                 );
 
                 chat.messages.push({
                     role:
                         "assistant",
                     content:
-                        aiReply
+                        aiReply,
+                    created_at:
+                        new Date().toISOString()
                 });
 
                 conversationHistory.push({
@@ -4295,6 +5056,8 @@ formData.append(
                         aiReply
                 });
 
+
+                updateContextIndicator();
 
                 const savedAssistant =
                     await saveMessageToCloud(
@@ -4632,9 +5395,17 @@ if (messageInput) {
 
             if (
                 event.key === "Enter" &&
-                !event.shiftKey
+                !event.shiftKey &&
+                enterToSendEnabled
             ) {
-
+            let thinkingAnimationEnabled =
+    localStorage.getItem(
+        "personalAI_thinkingAnimation"
+    ) !== "false";
+    let thinkingAnimationEnabled =
+    localStorage.getItem(
+        "personalAI_thinkingAnimation"
+    ) !== "false";
                 event.preventDefault();
 
                 chatForm.requestSubmit();

@@ -1042,3 +1042,12 @@ button {
     background: var(--hover);
     border-color: var(--border);
 }
+.message-timestamp {
+    margin-top: 6px;
+
+    font-size: 11px;
+    line-height: 1.3;
+
+    color: var(--muted-text);
+    opacity: 0.65;
+}

@@ -30,6 +30,7 @@ API_KEY = os.getenv("OPENROUTER_API_KEY")
 USERNAME = "Mesbaul_AI"
 PASSWORD = os.getenv("PERSONAL_AI_PASSWORD")
 SESSION_SECRET = os.getenv("SESSION_SECRET")
+IS_PRODUCTION = os.getenv("RENDER") == "true"
 
 CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
@@ -210,12 +211,12 @@ async def login(
     })
 
     response.set_cookie(
-        key="personal_ai_session",
-        value=session_token,
-        httponly=True,
-        samesite="lax",
-        secure=False,
-    )
+    key="personal_ai_session",
+    value=session_token,
+    httponly=True,
+    samesite="lax",
+    secure=IS_PRODUCTION,
+)
 
     return response
 
