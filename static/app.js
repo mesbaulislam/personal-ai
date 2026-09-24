@@ -5398,14 +5398,7 @@ if (messageInput) {
                 !event.shiftKey &&
                 enterToSendEnabled
             ) {
-            let thinkingAnimationEnabled =
-    localStorage.getItem(
-        "personalAI_thinkingAnimation"
-    ) !== "false";
-    let thinkingAnimationEnabled =
-    localStorage.getItem(
-        "personalAI_thinkingAnimation"
-    ) !== "false";
+            
                 event.preventDefault();
 
                 chatForm.requestSubmit();
