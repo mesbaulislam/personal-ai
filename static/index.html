@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Personal AI</title>
+    <title>MS GPT</title>
 
     <link rel="stylesheet" href="/static/style.css">
 
@@ -138,12 +138,16 @@
 
         <div class="login-box">
 
-            <div class="login-logo">
-                ✦
+            <div class="login-logo" aria-hidden="true">
+                <svg class="login-logo-mark" viewBox="0 0 48 48">
+                    <path d="M24 5.5l3.2 10.9 10.9 3.2-10.9 3.2L24 33.5l-3.2-10.7L9.9 19.6l10.9-3.2L24 5.5z" fill="currentColor"/>
+                    <path d="M36.2 29.2l1.4 4.7 4.8 1.4-4.8 1.4-1.4 4.7-1.4-4.7-4.8-1.4 4.8-1.4 1.4-4.7z" fill="currentColor" opacity="0.78"/>
+                    <circle cx="12.2" cy="33.5" r="2.2" fill="currentColor" opacity="0.68"/>
+                </svg>
             </div>
 
             <h1>
-                Personal AI
+                MS GPT
             </h1>
 
             <p class="login-subtitle">
@@ -195,7 +199,11 @@
 
 
             <div class="login-private">
-                🔒 Private use only
+                <svg class="login-private-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="5" y="10" width="14" height="11" rx="2"/>
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                </svg>
+                <span>Private use only</span>
             </div>
 
         </div>
@@ -209,78 +217,137 @@
 
     <div class="app" id="app">
 
-        <aside class="sidebar">
+        <aside class="sidebar" id="mainSidebar">
 
-            <div class="brand">
-
-                <div class="brand-icon">
-                    ✦
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-icon" aria-hidden="true">
+                        <svg viewBox="0 0 48 48">
+                            <path d="M24 7l3.2 10.8L38 21l-10.8 3.2L24 35l-3.2-10.8L10 21l10.8-3.2L24 7z"></path>
+                            <path d="M35 29l1.4 4.6L41 35l-4.6 1.4L35 41l-1.4-4.6L29 35l4.6-1.4L35 29z"></path>
+                        </svg>
+                    </div>
+                    <span>MS GPT</span>
                 </div>
 
-                <span>
-                    Personal AI
-                </span>
+                <button
+                    type="button"
+                    class="sidebar-toggle"
+                    id="sidebarToggle"
+                    title="Collapse sidebar"
+                    aria-label="Collapse sidebar"
+                    aria-expanded="true"
+                >
+                    <svg class="sidebar-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M15 6l-6 6 6 6"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div
+                class="sidebar-resizer"
+                id="sidebarResizer"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize sidebar"
+                title="Drag to resize sidebar"
+            ></div>
+
+            <div class="sidebar-scroll">
+
+                <button
+                    class="new-chat"
+                    id="newChat"
+                    type="button"
+                    title="New Chat"
+                >
+                    <svg class="new-chat-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    <span>New Chat</span>
+                </button>
+
+                <section class="folder-section" aria-label="Projects">
+                    <div class="folder-header">
+                        <span class="folder-section-title">
+                            <svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3.5 7.5h6l1.8 2h9.2v8.5a2 2 0 0 1-2 2h-15z"/>
+                                <path d="M3.5 7.5v-.8a1.7 1.7 0 0 1 1.7-1.7h4.2l1.8 2"/>
+                            </svg>
+                            <span>Projects</span>
+                        </span>
+
+                        <button
+                            type="button"
+                            id="newFolderBtn"
+                            class="folder-add-btn"
+                            title="New Project"
+                            aria-label="New Project"
+                        >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="folderList" class="folder-list"></div>
+                </section>
+
+                <section class="sidebar-section pinned-section" id="pinnedSection" aria-label="Pinned">
+                    <div class="sidebar-section-header">
+                        <span class="sidebar-section-title">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M8 4l8 8M9 3l6 6M6 8l10 10M7 17l-3 3M10 14l-5 5"/>
+                            </svg>
+                            <span>Pinned</span>
+                        </span>
+                    </div>
+                    <div id="pinnedList" class="chat-list pinned-chat-list"></div>
+                </section>
+
+                <section class="sidebar-section recents-section" id="recentsSection" aria-label="Recents">
+                    <div class="sidebar-section-header">
+                        <span class="sidebar-section-title">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/>
+                            </svg>
+                            <span id="recentsLabel">Recents</span>
+                        </span>
+                    </div>
+                    <div id="chatList" class="chat-list"></div>
+                </section>
 
             </div>
 
+            <div class="sidebar-bottom">
+                <div class="private-status">
+                    <svg class="bottom-status-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="5" y="10" width="14" height="11" rx="2"/>
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                    </svg>
+                    <span>Private AI</span>
+                </div>
 
-            <button
-                class="new-chat"
-                id="newChat"
-                type="button"
-            >
-                <span>＋</span>
-                New Chat
-            </button>
-<div class="folder-section">
+                <button type="button" id="themeBtn" class="theme-btn" title="Open Settings"></button>
 
-    <div class="folder-header">
-        <span>🗂️ Folders</span>
+                <button
+                    type="button"
+                    id="exportChatBtn"
+                    class="theme-btn sidebar-bottom-action"
+                    title="Export Chat"
+                >
+                    <svg class="bottom-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3v12"/>
+                        <path d="M8 11l4 4 4-4"/>
+                        <path d="M5 20h14"/>
+                    </svg>
+                    <span>Export Chat</span>
+                </button>
 
-        <button
-            type="button"
-            id="newFolderBtn"
-            class="folder-add-btn"
-            title="New Folder"
-        >
-            ＋
-        </button>
-    </div>
-
-    <div
-        id="folderList"
-        class="folder-list"
-    ></div>
-
-</div>
-
-            <div
-                class="chat-list"
-                id="chatList"
-            ></div>
-
-
-<div class="sidebar-bottom">
-
-    <div class="private-status">
-        🔒 Private AI
-    </div>
-<button type="button" id="themeBtn" class="theme-btn">
-    🌙 Dark Mode
-</button>
-    <button
-        type="button"
-        id="exportChatBtn"
-        class="theme-btn"
-    >
-        📥 Export Chat
-    </button>
-    
-    <button type="button" id="logoutBtn" class="logout-btn">
-        Logout
-    </button>
-
-</div>
+                <button type="button" id="logoutBtn" class="logout-btn">
+                    Logout
+                </button>
+            </div>
         </aside>
 
 
@@ -300,7 +367,7 @@
                 <div class="model-name">
 
                     <strong>
-                        Personal AI
+                        MS GPT
                     </strong>
 
                     <span>
@@ -309,8 +376,22 @@
 
                 </div>
 
-            </header>
+                <button
+                    type="button"
+                    id="privateModeBtn"
+    class="private-mode-top-btn"
+    title="Private Mode"
+    aria-label="Private Mode"
+                    aria-pressed="false"
+                >
+                    <svg class="private-mode-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="5" y="10" width="14" height="11" rx="2"/>
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                    </svg>
+                    <span class="private-mode-label">Private</span>
+                </button>
 
+            </header>
 
             <section
                 class="messages"
@@ -331,8 +412,48 @@
                     </h1>
 
                     <p>
-                        তোমার প্রশ্ন লিখো অথবা একটি image upload করো।
+                        Ask anything, get help, or start creating.
                     </p>
+
+                    <div class="welcome-suggestions">
+
+                        <button
+                            type="button"
+                            class="welcome-suggestion"
+                            data-prompt="Explain something to me simply"
+                        >
+                            <span class="welcome-suggestion-icon">✦</span>
+                            <span>Explain something</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="welcome-suggestion"
+                            data-prompt="Help me write something"
+                        >
+                            <span class="welcome-suggestion-icon">✎</span>
+                            <span>Write something</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="welcome-suggestion"
+                            data-prompt="Help me with some code"
+                        >
+                            <span class="welcome-suggestion-icon">&lt;/&gt;</span>
+                            <span>Help with code</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="welcome-suggestion"
+                            data-prompt="Give me some creative ideas"
+                        >
+                            <span class="welcome-suggestion-icon">✧</span>
+                            <span>Brainstorm ideas</span>
+                        </button>
+
+                    </div>
 
                 </div>
 
@@ -382,74 +503,72 @@
     </button>
 </div>
 
-<form id="chatForm">
-                <form id="chatForm">
+<form id="chatForm" class="composer-form">
 
-                    <input
-                        type="file"
-                        id="imageInput"
-                        accept="image/png,image/jpeg,image/webp"
-                        hidden
-                    >
+    <input type="file" id="imageInput" accept="image/png,image/jpeg,image/webp" hidden>
+    <input type="file" id="fileInput" accept=".txt,.pdf,.docx" hidden>
 
+    <div class="composer-left-tools">
+        <div class="composer-plus-wrap">
+            <button
+                type="button"
+                class="composer-tool-btn composer-plus-btn"
+                id="plusMenuBtn"
+                title="More options"
+                aria-label="More options"
+                aria-expanded="false"
+                aria-controls="plusMenu"
+            >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
 
-                    <button
-                        type="button"
-                        class="icon-btn"
-                        id="uploadBtn"
-                        title="Upload image"
-                        aria-label="Upload image"
-                    >
-                        📎
-                    </button>
-                    <input
-    type="file"
-    id="fileInput"
-    accept=".txt,.pdf,.docx"
-    hidden
->
+            <div class="composer-plus-menu" id="plusMenu" hidden>
+                <div class="composer-plus-menu-head">
+                    <span>Tools</span>
+                </div>
 
-<button
-    type="button"
-    class="icon-btn"
-    id="fileBtn"
-    title="Upload file"
-    aria-label="Upload file"
->
-    📄
-</button>
+                <button type="button" class="composer-menu-item" id="uploadBtn" title="Upload image" aria-label="Upload image">
+                    <span class="composer-menu-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m4.5 18 5.2-5.2 3.5 3.5 2.2-2.2 4.1 4.1"/></svg>
+                    </span>
+                    <span class="composer-menu-copy"><strong>Image</strong><small>Add an image to the chat</small></span>
+                </button>
 
+                <button type="button" class="composer-menu-item" id="fileBtn" title="Upload file" aria-label="Upload file">
+                    <span class="composer-menu-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
+                    </span>
+                    <span class="composer-menu-copy"><strong>File</strong><small>TXT, PDF or DOCX</small></span>
+                </button>
 
-                    <textarea
-                        id="messageInput"
-                        placeholder="Message Personal AI..."
-                        rows="1"
-                    ></textarea>
-                    <button
-                        type="button"
-                        class="voice-btn"
-                        id="voiceBtn"
-                        title="Voice input"
-                        aria-label="Voice input"
-                    >
-                        🎤
-                    </button>
+                <button type="button" class="composer-menu-item" id="webSearchBtn" title="Web Search" aria-label="Web Search" aria-pressed="false">
+                    <span class="composer-menu-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6M11 8v6"/></svg>
+                    </span>
+                    <span class="composer-menu-copy"><strong>Web Search</strong><small>Search the web for answers</small></span>
+                    <span class="composer-menu-check" aria-hidden="true">✓</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
-                    <button
-                        type="submit"
-                        class="send-btn"
-                        id="sendBtn"
-                        title="Send"
-                        aria-label="Send message"
-                    >
-                        ➤
-                    </button>
+    <textarea id="messageInput" placeholder="Message MS GPT..." rows="1" aria-label="Message MS GPT"></textarea>
 
-                </form>
+    <div class="composer-right-tools">
+        <button type="button" class="composer-tool-btn voice-btn" id="voiceBtn" title="Voice input" aria-label="Voice input">
+            <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
+            <svg class="voice-stop-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+        </button>
+        <button type="submit" class="send-btn" id="sendBtn" title="Send" aria-label="Send message">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </button>
+    </div>
+
+</form>
 
 
                 <div class="input-note">
-                    Personal AI • Private use
+                    MS GPT • Private use
                 </div>
 
             </div>
