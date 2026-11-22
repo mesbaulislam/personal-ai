@@ -1,3 +1,22 @@
+# Secrets — never commit these
 .env
+
+# Virtual environments
 venv/
+.venv/
+
+# Python
 __pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.bak
+*~
+*.swp
+.vscode/
+.idea/
